@@ -105,6 +105,8 @@ When an ADR covers a dimension and the gap doesn't disturb it, acknowledge it si
 - [ ] **Push back on shallow proposals.** "That module has a one-line body behind a three-method interface. What's it hiding?"
 - [ ] **Offer ADRs sparingly.** Only when the 3-part test passes per [ADR-FORMAT.md](ADR-FORMAT.md): hard to reverse, surprising without context, real trade-off.
 - [ ] **Update CONTEXT.md.** When a new domain term emerges, propose adding it per [CONTEXT-FORMAT.md](CONTEXT-FORMAT.md).
+- [ ] **Push for concrete interfaces.** When interface design or data models are disturbed, pin down exact method signatures, field types, and schemas before moving to the next dimension. Abstract descriptions like "a Tracker with fetch methods" are insufficient for downstream skills — write the Python-typed protocol, the JSON schema, and the YAML schema inline during grilling.
+- [ ] **Distill principles as they emerge.** When a high-level intent emerges that reflects the trade-offs the developer is willing to make or the direction of the project or that are highly generally applicable (e.g., "tests shouldn't care about internals"), note it. At the end of grilling, crystallise only valid candidates into `docs/architecture/principles.md`. Each principle is a short label and a single intent sentence — no expanded rationale. Principles outlive the gap analysis and are not overwritten on subsequent passes.
 - [ ] **Resolve dependencies first.** If seam placement depends on technology choice, ask about technology first.
 
 ## Interface Design (Optional Sub-Process)
@@ -124,6 +126,7 @@ After grilling, overwrite `docs/architecture/gap-analysis.md` using [GAP-ANALYSI
 
 - [ ] **Current State** — architecture snapshot, key decisions, ADR references
 - [ ] **Required Changes** — what modules, seams, technologies, patterns must change
+- [ ] **Module Interfaces** — concrete contracts at every module boundary (method signatures, data model fields, config schema, persisted file schemas). Python-typed dataclasses and ABCs where applicable. This section is the primary input for `to-prd` and TDD — without it, implementation agents cannot write tests against concrete contracts.
 - [ ] **Decisions Made** — architectural decisions crystallised in this pass, with ADR numbers
 - [ ] **Decisions Deferred** — unresolved decisions, why deferred, when revisited
 - [ ] **Affected Dimensions** — which scan dimensions are impacted, brief notes
@@ -149,6 +152,8 @@ Re-read the gap analysis against the grilling conversation. Check:
 - [ ] ADRs created for qualifying decisions
 - [ ] No dimension was left unresolved — each is either decided, deferred, or confirmed unchanged
 - [ ] Domain terms match CONTEXT.md
+- [ ] Module Interfaces section is concrete enough for an implementation agent to write code without re-interviewing the architect — method signatures have types, data models have fields, persisted files have schemas
+- [ ] **Principles written** — `docs/architecture/principles.md` created or updated with one-line principles distilled from this session
 - [ ] The gap analysis is self-contained — a new agent reading only this file and the requirements docs should understand what to build
 
 Then ask: "Architecture aligned. Another pass needed, or proceed to `/to-prd`?"
