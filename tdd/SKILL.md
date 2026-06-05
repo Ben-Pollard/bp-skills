@@ -48,6 +48,7 @@ When exploring the codebase, use the project's domain glossary so that test name
 
 Before writing any code:
 
+HITL mode:
 - [ ] Confirm with user what interface changes are needed
 - [ ] Confirm with user which behaviors to test (prioritize)
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
@@ -58,6 +59,16 @@ Before writing any code:
 Ask: "What should the public interface look like? Which behaviors are most important to test?"
 
 **You can't test everything.** Confirm with the user exactly which behaviors matter most. Focus testing effort on critical paths and complex logic, not every possible edge case.
+
+AFK mode:
+- [ ] Identify what interface changes are needed
+- [ ] Identify what behaviors to test (prioritize)
+- [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
+- [ ] Design interfaces for [testability](interface-design.md)
+
+Focus testing effort on critical paths and complex logic, not every possible edge case.
+
+
 
 ### 2. Tracer Bullet
 
@@ -107,3 +118,32 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 [ ] Code is minimal for this test
 [ ] No speculative features added
 ```
+
+### Report
+
+When the checklist is complete and only in AFK mode, write `.symphony/outcome.json`:
+
+```json
+{
+  "status": "DONE",
+  "summary": "Implemented user authentication with JWT flow",
+  "ac_coverage": {
+    "met": [
+      "AC-1: User can register with email and password",
+      "AC-2: User receives JWT on successful login",
+      "AC-3: Invalid credentials return 401"
+    ],
+    "unmet": [],
+    "notes": ""
+  },
+  "test_results": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0
+  },
+  "concerns": [],
+  "principles_reviewed": true
+}
+```
+
+Use `DONE_WITH_CONCERNS` if you completed but have doubts. Use `BLOCKED` if you cannot proceed. Use `DONE` only if all ACs are met.

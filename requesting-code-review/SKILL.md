@@ -72,21 +72,6 @@ You: [Fix progress indicators]
 [Continue to Task 3]
 ```
 
-## Integration with Workflows
-
-**Subagent-Driven Development:**
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
-
-**Executing Plans:**
-- Review after each task or at natural checkpoints
-- Get feedback, apply, continue
-
-**Ad-Hoc Development:**
-- Review before merge
-- Review when stuck
-
 ## Red Flags
 
 **Never:**
@@ -101,3 +86,27 @@ You: [Fix progress indicators]
 - Request clarification
 
 See template at: requesting-code-review/code-reviewer.md
+
+
+**3. Write Verdict**
+
+```json
+{
+  "status": "DONE",
+  "summary": "Spec compliant, one principle concern",
+  "spec_compliance": "APPROVED",
+  "principles_aligned": false,
+  "violations": [
+    {
+      "principle": "Survivable Tests",
+      "file": "src/payment.ts:55",
+      "issue": "Internal collaborator mocked — tests will break on refactor"
+    }
+  ],
+  "review_notes": [
+    "All acceptance criteria met with passing tests",
+    "Mock at internal seam (payment.ts:55) violates Survivable Tests principle"
+  ],
+  "action": "changes_requested"
+}
+```
