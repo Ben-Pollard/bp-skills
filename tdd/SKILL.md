@@ -119,30 +119,33 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 [ ] No speculative features added
 ```
 
-### Report
+### 5. Commit and Report
 
-When the checklist is complete and only in AFK mode, write `.symphony/outcome.json`:
+Commit all changes:
+
+```bash
+git add -A && git commit -m "<brief summary of what was built>"
+```
+
+Get the commit SHA:
+
+```bash
+git rev-parse HEAD
+```
+
+When the checklist is complete, write the outcome file at the path provided by the orchestrator (`outcome_path`). Create parent directories if they don't exist.
 
 ```json
 {
   "status": "DONE",
   "summary": "Implemented user authentication with JWT flow",
-  "ac_coverage": {
-    "met": [
-      "AC-1: User can register with email and password",
-      "AC-2: User receives JWT on successful login",
-      "AC-3: Invalid credentials return 401"
-    ],
-    "unmet": [],
-    "notes": ""
-  },
   "test_results": {
     "passed": 14,
     "failed": 0,
     "skipped": 0
   },
-  "concerns": [],
-  "principles_reviewed": true
+  "commit_sha": "abc123def456...",
+  "concerns": []
 }
 ```
 

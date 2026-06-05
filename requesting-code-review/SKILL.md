@@ -40,9 +40,7 @@ Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
 - `{HEAD_SHA}` - Ending commit
 
 **3. Act on feedback:**
-- Fix Critical issues immediately
-- Fix Important issues before proceeding
-- Note Minor issues for later
+- Fix all flagged issues — the reviewer only flags issues worth fixing
 - Push back if reviewer is wrong (with reasoning)
 
 ## Example
@@ -62,22 +60,20 @@ HEAD_SHA=$(git rev-parse HEAD)
   HEAD_SHA: 3df7661
 
 [Subagent returns]:
-  Strengths: Clean architecture, real tests
   Issues:
-    Important: Missing progress indicators
-    Minor: Magic number (100) for reporting interval
-  Assessment: Ready to proceed
+    - Missing progress indicators (file:line)
+    - Magic number (100) for reporting interval (file:line)
+  Assessment: changes-requested
 
-You: [Fix progress indicators]
-[Continue to Task 3]
+You: [Fix both issues]
+[Request re-review]
 ```
 
 ## Red Flags
 
 **Never:**
 - Skip review because "it's simple"
-- Ignore Critical issues
-- Proceed with unfixed Important issues
+- Proceed with unfixed issues
 - Argue with valid technical feedback
 
 **If reviewer wrong:**
@@ -90,12 +86,12 @@ See template at: requesting-code-review/code-reviewer.md
 
 **3. Write Verdict**
 
+Write the verdict JSON to the `outcome_path` provided by the orchestrator. Create parent directories if needed.
+
 ```json
 {
-  "status": "DONE",
-  "summary": "Spec compliant, one principle concern",
   "spec_compliance": "APPROVED",
-  "principles_aligned": false,
+  "principles_aligned": true,
   "violations": [
     {
       "principle": "Survivable Tests",

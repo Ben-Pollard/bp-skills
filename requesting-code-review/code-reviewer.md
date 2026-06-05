@@ -2,15 +2,14 @@
 
 Use this template when dispatching a code reviewer subagent.
 
-**Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
+**Purpose:** Review completed work against requirements and quality standards. Only flag issues worth fixing.
 
 ```
 Task tool (general-purpose):
   description: "Review code changes"
   prompt: |
-    You are a Senior Code Reviewer with expertise in software architecture,
-    design patterns, and best practices. Your job is to review completed work
-    against its plan or requirements and identify issues before they cascade.
+    You are reviewing completed work against its requirements. Only flag issues
+    that must be fixed before proceeding — if it's not worth fixing, don't mention it.
 
     ## What Was Implemented
 
@@ -32,93 +31,62 @@ Task tool (general-purpose):
 
     ## What to Check
 
-    **Plan alignment:**
-    - Does the implementation match the plan / requirements?
-    - Are deviations justified improvements, or problematic departures?
-    - Is all planned functionality present?
+    **Spec compliance:**
+    - Does the implementation match the requirements?
+    - All planned functionality present?
+    - No extra features not requested?
 
-    **Code quality:**
-    - Clean separation of concerns?
-    - Proper error handling?
-    - Type safety where applicable?
-    - DRY without premature abstraction?
-    - Edge cases handled?
+    **Test quality** — read the TDD skill's `tests.md`, `deep-modules.md`, and `mocking.md`.
+    Tests must verify behavior through public interfaces and survive internal refactors.
+    Tests that check dataclass field types, ABC internals, or mock internal collaborators
+    are bad tests and must be flagged.
 
-    **Architecture:**
-    - Sound design decisions?
-    - Reasonable scalability and performance?
-    - Security concerns?
-    - Integrates cleanly with surrounding code?
+    **Code quality** — read the TDD skill's `deep-modules.md`, `interface-design.md`,
+    and `refactoring.md`. Flag: shallow modules (large interface, thin implementation),
+    tight coupling, interfaces that would be hard to test.
 
-    **Testing:**
-    - Tests verify real behavior, not mocks?
-    - Edge cases covered?
-    - Integration tests where they matter?
-    - All tests passing?
-
-    **Production readiness:**
-    - Migration strategy if schema changed?
-    - Backward compatibility considered?
-    - Documentation complete?
-    - No obvious bugs?
-
-    ## Calibration
-
-    Categorize issues by actual severity. Not everything is Critical.
-    Acknowledge what was done well before listing issues — accurate praise
-    helps the implementer trust the rest of the feedback.
-
-    If you find significant deviations from the plan, flag them specifically
-    so the implementer can confirm whether the deviation was intentional.
-    If you find issues with the plan itself rather than the implementation,
-    say so.
+    **Operational:**
+    - Error handling present and correct?
+    - Security risks?
+    - Docs match what was built?
 
     ## Output Format
 
-    ### Strengths
-    [What's well done? Be specific.]
-
     ### Issues
-
-    #### Critical (Must Fix)
-    [Bugs, security issues, data loss risks, broken functionality]
-
-    #### Important (Should Fix)
-    [Architecture problems, missing features, poor error handling, test gaps]
-
-    #### Minor (Nice to Have)
-    [Code style, optimization opportunities, documentation polish]
-
-    For each issue:
-    - File:line reference
-    - What's wrong
-    - Why it matters
-    - How to fix (if not obvious)
-
-    ### Recommendations
-    [Improvements for code quality, architecture, or process]
+    [Flat list. Each issue is something that must be fixed before approval.
+    File:line reference, what's wrong, why it matters.]
 
     ### Assessment
-
-    **Ready to merge?** [Yes | No | With fixes]
-
-    **Reasoning:** [1-2 sentence technical assessment]
+    **Verdict:** [approved | changes-requested]
+    **Reasoning:** [1-2 sentences]
 
     ## Critical Rules
 
     **DO:**
-    - Categorize by actual severity
     - Be specific (file:line, not vague)
     - Explain WHY each issue matters
-    - Acknowledge strengths
     - Give a clear verdict
 
     **DON'T:**
+    - Flag anything you wouldn't insist on fixing
     - Say "looks good" without checking
-    - Mark nitpicks as Critical
     - Give feedback on code you didn't actually read
-    - Be vague ("improve error handling")
     - Avoid giving a clear verdict
+
+    ## Outcome File
+
+    After producing your review, write the verdict JSON to the `outcome_path`
+    provided by the orchestrator. Create parent directories if needed.
+
+    ```json
+    {
+      "spec_compliance": "APPROVED",
+      "principles_aligned": true,
+      "violations": [],
+      "review_notes": ["All acceptance criteria met with passing tests"],
+      "action": "approved"
+    }
+    ```
 ```
 
 **Placeholders:**
@@ -126,43 +94,3 @@ Task tool (general-purpose):
 - `{PLAN_OR_REQUIREMENTS}` — what it should do (plan file path, task text, or requirements)
 - `{BASE_SHA}` — starting commit
 - `{HEAD_SHA}` — ending commit
-
-**Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
-
-## Example Output
-
-```
-### Strengths
-- Clean database schema with proper migrations (db.ts:15-42)
-- Comprehensive test coverage (18 tests, all edge cases)
-- Good error handling with fallbacks (summarizer.ts:85-92)
-
-### Issues
-
-#### Important
-1. **Missing help text in CLI wrapper**
-   - File: index-conversations:1-31
-   - Issue: No --help flag, users won't discover --concurrency
-   - Fix: Add --help case with usage examples
-
-2. **Date validation missing**
-   - File: search.ts:25-27
-   - Issue: Invalid dates silently return no results
-   - Fix: Validate ISO format, throw error with example
-
-#### Minor
-1. **Progress indicators**
-   - File: indexer.ts:130
-   - Issue: No "X of Y" counter for long operations
-   - Impact: Users don't know how long to wait
-
-### Recommendations
-- Add progress reporting for user experience
-- Consider config file for excluded projects (portability)
-
-### Assessment
-
-**Ready to merge: With fixes**
-
-**Reasoning:** Core implementation is solid with good architecture and tests. Important issues (help text, date validation) are easily fixed and don't affect core functionality.
-```

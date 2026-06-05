@@ -95,7 +95,6 @@ repos:
     rev: v0.8.0
     hooks:
       - id: ruff
-        args: [check]
       - id: ruff-format
   - repo: local
     hooks:
@@ -182,8 +181,9 @@ touch
   src/{{ package_name }}/__init__.py
   tests/__init__.py
   tests/unit/__init__.py
+  tests/unit/test_placeholder.py   (prevents pre-commit "no tests" failure)
   tests/integration/__init__.py
-  tests/conftest.py          (empty)
+  tests/conftest.py                (empty)
 ```
 
 ### 4. Install and verify
@@ -210,3 +210,4 @@ uv run pre-commit install
 - `python.analysis.extraPaths` for flat layout — omit, don't point to root.
 - `state.json` in gitignore needed for Symphony projects. Remove if not a Symphony project.
 - `ruff format --check` vs `ruff format` — the hook checks, doesn't mutate. Users format manually or via editor on-save.
+- Empty test dirs cause pre-commit `pytest tests/unit` to fail with exit code 5. Always create `tests/unit/test_placeholder.py`.
