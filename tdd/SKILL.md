@@ -40,11 +40,14 @@ RIGHT (vertical):
   ...
 ```
 
+# Software Engineering Best Practices
+You implement via test-driven development. But don't forget best practices: SOLID, DRY, YAGNI.
+
 ## Workflow
 
 ### 1. Planning
 
-When exploring the codebase, use the project's domain glossary so that test names and interface vocabulary match the project's language, and respect ADRs in the area you're touching.
+When exploring the codebase, refer to CONTEXT.md so that test names and interface vocabulary match the project's language, and respect ADRs in the area you're touching (docs/adr).
 
 Before writing any code:
 
@@ -101,11 +104,15 @@ Rules:
 
 After all tests pass, look for [refactor candidates](refactoring.md):
 
+- [ ] Minimise procedural code — see [declarative-over-procedural.md](declarative-over-procedural.md)
 - [ ] Extract duplication
 - [ ] Deepen modules (move complexity behind simple interfaces)
-- [ ] Apply SOLID principles where natural
+- [ ] SRP: every class has both data and behavior — no empty shells. DRY: no identical mutation sequence repeated across functions.
 - [ ] Consider what new code reveals about existing code
 - [ ] Run tests after each refactor step
+
+- Unfamiliar with a library? -> use context7
+- Don't know the cleanest way to approach a problem? -> use web search to inform yourself
 
 **Never refactor while RED.** Get to GREEN first.
 
@@ -150,3 +157,13 @@ When the checklist is complete, write the outcome file at the path provided by t
 ```
 
 Use `DONE_WITH_CONCERNS` if you completed but have doubts. Use `BLOCKED` if you cannot proceed. Use `DONE` only if all ACs are met.
+
+
+## Critical Rules
+
+**DO:**
+- Respect testing levels explicitly defined in the issue. If it calls for an integration test against a real service then write an integration test.
+
+**DON'T:**
+- Reason away the one test at a time rule because you are planning on creating many tests: maybe that means you are not testing public interfaces or not parameterising effectively?
+- Minimise procedural code — see [declarative-over-procedural.md](declarative-over-procedural.md)

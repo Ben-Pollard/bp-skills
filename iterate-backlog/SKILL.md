@@ -9,13 +9,6 @@ description: Use when working through a backlog of implementation issues from a 
 
 Thin dispatcher. Reads one issue from a local markdown tracker, dispatches `implementer` and `reviewer` subagents, then marks the issue done. One issue per invocation. Does no implementation or review work inline when subagents are available.
 
-## When to Use
-
-- Working through issues in `.scratch/<feature>/issues/`
-- Road-testing implementation and review skills in isolation (each phase runs in its own subagent)
-- Before a full orchestrator is built — manual equivalent
-
-NOT for: multiple issues, GitHub Issues, planning/breakdown work.
 
 ## Workflow
 
@@ -37,32 +30,50 @@ Extract `<feature>` from the issue's path (the directory under `.scratch/`). Der
 OUTCOMES_DIR = .scratch/<feature>/outcomes/
 IMPLEMENT_OUTCOME = .scratch/<feature>/outcomes/implement-outcome.json
 REVIEW_OUTCOME = .scratch/<feature>/outcomes/review-outcome.json
+REDUCTION_OUTCOME = .scratch/<feature>/outcomes/reduction-outcome.json
 ```
 
 Dispatch `implementer` subagent via Task tool with:
 - Full issue body (acceptance criteria, what to build)
+- Relevant sections from the parent PRD and/or docs/architecture/gap-analysis.md. ONLY if they add valuable context to the issue. DO NOT include context that will confuse the implementer about the scope of its work.
 - Instruction: load the `tdd` skill, implement issue
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
-  - `commit`: `true`
+  - `commit`: `true` (create new commit on top of HEAD, never --amend)
 
 ### 4. Dispatch reviewer subagent
 
-After implementer exits, read `IMPLEMENT_OUTCOME` for the `commit_sha`. Use `HEAD~1` as base since the implementer prepared a single commit.
+After implementer exits, read `IMPLEMENT_OUTCOME`.
 
 Dispatch `reviewer` subagent via Task tool with:
 - Issue body (acceptance criteria)
-- Instruction: load `requesting-code-review` skill, inspect the diff, produce verdict
+- Instruction: load `requesting-code-review` skill
 - Dispatch context:
   - `outcome_path`: `REVIEW_OUTCOME`
-  - `base_sha`: `HEAD~1`
-  - `head_sha`: from `implement-outcome.json` `commit_sha`
+
 
 ### 5. Handle review verdict
 
 Read `REVIEW_OUTCOME`. Parse the `action` field: `approved`, `changes-requested`, or `escalate`.
 
-**Changes requested:** Dispatch `implementer` subagent with review feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, go to step 4 (re-review).
+**Changes requested:** Dispatch `implementer` subagent with review feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, go to step 4 (re-review — both code reviewer and reduction auditor re-run).
+
+**Approved:** Proceed to step 5.5.
+
+### 5.5 Dispatch code reduction auditor
+
+After reviewer approves, dispatch a fresh `reviewer` subagent for a code reduction audit:
+
+Dispatch `reviewer` subagent via Task tool with:
+- Instruction: load `minimizing-code` skill
+- Dispatch context:
+  - `outcome_path`: `REDUCTION_OUTCOME`
+
+### 5.6 Handle reduction verdict
+
+Read `REDUCTION_OUTCOME`. Parse the `action` field.
+
+**Changes requested:** Dispatch `implementer` subagent with reduction feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, go to step 4 (re-review: both reviewer and reduction auditor must pass).
 
 **Approved:** Proceed to step 6.
 
@@ -72,7 +83,7 @@ Load `verification-before-completion` skill. Run fresh test pass. Do NOT reuse r
 
 ### 7. Mark done
 
-Change `Status:` to `done`. Append `## Outcome` section with one-line summary. Reference `IMPLEMENT_OUTCOME` and `REVIEW_OUTCOME` paths. Stop.
+Change `Status:` to `done`. Append `## Outcome` section with one-line summary. Reference `IMPLEMENT_OUTCOME`, `REVIEW_OUTCOME`, and `REDUCTION_OUTCOME` paths. Stop.
 
 ### Subagent Failure
 
@@ -92,11 +103,10 @@ If any subagent hits serious doubt, review loop exceeds 3 rounds, or subagent re
 ```
 .scratch/<feature>/outcomes/
 ├── implement-outcome.json    # from implementer (overwritten on fix cycles)
-└── review-outcome.json       # from reviewer (overwritten on re-review)
+├── review-outcome.json       # from reviewer (overwritten on re-review)
+└── reduction-outcome.json    # from reduction auditor (overwritten on re-audit)
 ```
 
-Implement schema: `{status, summary, test_results, commit_sha, concerns}`
-Review schema: `{spec_compliance, principles_aligned, violations, review_notes, action}`
 
 ## Local Tracker Conventions
 
@@ -108,10 +118,16 @@ Issue files: `.scratch/<feature>/issues/NN-slug.md`. Status line near top. Appen
 
 Blocked issues: skip if `Blocked by` references a non-terminal issue.
 
-## Common Mistakes
+# Critical Rules
 
-- Doing implementation inline — always dispatch via Task tool when subagents are configured.
-- Reusing test results from implementation phase — verification must be fresh.
-- Proceeding to next issue — one per invocation.
+**DO:**
+- Ensure the intent expressed in the docs is clear and well scoped
+
+**DON'T:**
+- Implement code
+- Get a full understanding of the codebase
+- Pass the agents any code in their context: they will explore the codebase.
+- Reuse test results from implementation phase — verification must be fresh.
+- Procede to next issue — one per invocation.
 - Review loop exceeding 3 rounds — escalate.
-- Duplicating other skills' workflows — this skill orchestrates handoffs, nothing more.
+- Define return schemas - they are defined in the skills.

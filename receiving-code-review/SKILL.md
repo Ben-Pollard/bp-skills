@@ -1,4 +1,3 @@
----
 name: receiving-code-review
 description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 ---
@@ -211,3 +210,56 @@ When replying to inline review comments on GitHub, reply in the comment thread (
 Verify. Question. Then implement.
 
 No performative agreement. Technical rigor always.
+
+## Report
+
+After all review items are addressed (fixed, pushed back, or blocked on clarification), write the outcome file at the path provided by the orchestrator (`outcome_path`). Create parent directories if they don't exist.
+
+```json
+{
+  "status": "DONE",
+  "summary": "Addressed 3 review violations: removed dead _now param, removed unreachable FileNotFoundError handler, added dict validation for yaml.safe_load",
+  "violations_addressed": [
+    {
+      "principle": "YAGNI",
+      "file": "src/symphony/tracker/scratch.py",
+      "resolution": "fixed",
+      "detail": "Removed unused _now parameter and datetime import from __init__"
+    }
+  ],
+  "violations_pushed_back": [
+    {
+      "principle": "Survivable Tests",
+      "file": "tests/unit/test_config.py:42",
+      "resolution": "pushed_back",
+      "detail": "Test exercises public load_config() interface only — no internal mocking"
+    }
+  ],
+  "violations_unclear": [
+    {
+      "principle": "Interface Design",
+      "file": "src/symphony/config.py",
+      "detail": "Unclear whether config should be a class or module-level functions — asking reviewer"
+    }
+  ],
+  "test_results": {
+    "passed": 45,
+    "failed": 0,
+    "skipped": 0
+  },
+  "commit_sha": "abc123def456...",
+  "concerns": []
+}
+```
+
+### Status values
+
+- `DONE` — all feedback addressed, tests pass, committed
+- `DONE_WITH_CONCERNS` — completed but have doubts about the resolution
+- `BLOCKED` — cannot proceed (e.g., waiting on reviewer clarification)
+
+### Resolution values
+
+- `fixed` — applied the fix
+- `pushed_back` — verified and disagreed with technical reasoning
+- `unclear` — waiting on reviewer clarification before acting

@@ -1,11 +1,16 @@
 # Refactor Candidates
 
-After TDD cycle, look for:
+After TDD cycle, review the entire module you changed — not just your diff.
+The code you touched reveals friction in the code around it; ignore that friction and it compounds.
 
-- **Duplication** → Extract function/class
+Look for:
+
+- **Duplication** → Extract function/class. Same 2+ field assignments across 3+ sites is duplication.
 - **Long methods** → Break into private helpers (keep tests on public interface)
-- **Shallow modules** → Combine or deepen
-- **Feature envy** → Move logic to where data lives
+- **Shallow modules** → Dataclasses with zero methods, only external mutation. Data and its behavior should co-locate.
+- **Feature envy** → Logic that mutates another module's data belongs on that data's class. If >2 functions outside a dataclass's owning module mutate its fields, extract those mutations as methods on the dataclass.
+- **SRP: data without behavior** → A class with only public fields and no methods has no single responsibility — it exposes its internals to everyone. Ask: what transitions are legal? What invariants must hold?
+- **DRY: repeated mutation** → `obj.field = value` appearing identically across 3+ functions means the mutation should be a named method.
 - **Primitive obsession** → Introduce value objects
 - **Existing code** the new code reveals as problematic
 - **Repeated test variants** → Parametrise. Multiple test functions that differ only by input value are a smell.

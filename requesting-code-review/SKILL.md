@@ -2,107 +2,106 @@
 name: requesting-code-review
 description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 ---
-
-# Requesting Code Review
-
-Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
-
-**Core principle:** Review early, review often.
-
-## When to Request Review
-
-**Mandatory:**
-- After each task in subagent-driven development
-- After completing major feature
-- Before merge to main
-
-**Optional but valuable:**
-- When stuck (fresh perspective)
-- Before refactoring (baseline check)
-- After fixing complex bug
-
-## How to Request
-
-**1. Get git SHAs:**
-```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
-HEAD_SHA=$(git rev-parse HEAD)
-```
-
-**2. Dispatch code reviewer subagent:**
-
-Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
-
-**Placeholders:**
-- `{DESCRIPTION}` - Brief summary of what you built
-- `{PLAN_OR_REQUIREMENTS}` - What it should do
-- `{BASE_SHA}` - Starting commit
-- `{HEAD_SHA}` - Ending commit
-
-**3. Act on feedback:**
-- Fix all flagged issues — the reviewer only flags issues worth fixing
-- Push back if reviewer is wrong (with reasoning)
-
-## Example
-
-```
-[Just completed Task 2: Add verification function]
-
-You: Let me request code review before proceeding.
-
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
-HEAD_SHA=$(git rev-parse HEAD)
-
-[Dispatch code reviewer subagent]
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
-  PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
-  BASE_SHA: a7981ec
-  HEAD_SHA: 3df7661
-
-[Subagent returns]:
-  Issues:
-    - Missing progress indicators (file:line)
-    - Magic number (100) for reporting interval (file:line)
-  Assessment: changes-requested
-
-You: [Fix both issues]
-[Request re-review]
-```
-
-## Red Flags
-
-**Never:**
-- Skip review because "it's simple"
-- Proceed with unfixed issues
-- Argue with valid technical feedback
-
-**If reviewer wrong:**
-- Push back with technical reasoning
-- Show code/tests that prove it works
-- Request clarification
-
-See template at: requesting-code-review/code-reviewer.md
+# What we're trying to achieve
+Code that:
+- Works
+- Is maintainable
+- Is understandable
 
 
-**3. Write Verdict**
+# What to Check
 
-Write the verdict JSON to the `outcome_path` provided by the orchestrator. Create parent directories if needed.
+  **Spec compliance:**
+  - Does the implementation match the requirements?
+  - Testing requirements met? Integration tests included where called for in the issue?
+  - All planned functionality present?
+  - No extra features not requested?
+  - Will the code work?
 
-```json
-{
-  "spec_compliance": "APPROVED",
-  "principles_aligned": true,
-  "violations": [
-    {
-      "principle": "Survivable Tests",
-      "file": "src/payment.ts:55",
-      "issue": "Internal collaborator mocked — tests will break on refactor"
-    }
-  ],
-  "review_notes": [
-    "All acceptance criteria met with passing tests",
-    "Mock at internal seam (payment.ts:55) violates Survivable Tests principle"
-  ],
-  "action": "changes_requested"
-}
-```
+  **Test quality** — read `.agents/skills/tdd/tests.md`, `.agents/skills/tdd/deep-modules.md`, and `.agents/skills/tdd/mocking.md`. Do the tests adhere to these principles?
+
+  **Code quality**
+  - SOLID
+  - KISS
+  - DRY
+  - YAGNI
+  - `.agents/skills/tdd/deep-modules.md`
+  - `.agents/skills/tdd/interface-design.md`
+  - `.agents/skills/tdd/refactoring.md`
+  - `.agents/skills/tdd/declarative-over-procedural.md`
+
+  **Operational:**
+  - Security risks?
+  - Docs match what was built?
+
+  ## Output Format
+
+  ### Issues
+  [Flat list. Each issue is something that must be fixed before approval.
+  File:line reference, what's wrong, why it matters.]
+
+  ### Assessment
+  **Verdict:** [approved | changes-requested]
+  **Reasoning:** [1-2 sentences]
+
+  ## Critical Rules
+
+  **DO:**
+  - Read all the .md files referred to above (use Read tool on the full `.agents/skills/tdd/*.md` paths)
+  - Be specific (file:line, not vague)
+  - Explain WHY each issue matters
+  - Give a clear verdict
+
+  **DON'T:**
+  - Ignore criteria defined in skills because they are less familiar: deep modules, mocking at system boundaries, sdk-style interfaces, refactoring opportunities, testing public interfaces, declarative over procedural, etc. as referenced in `.agents/skills/tdd/deep-modules.md`, `.agents/skills/tdd/mocking.md`, `.agents/skills/tdd/interface-design.md`, `.agents/skills/tdd/refactoring.md`, `.agents/skills/tdd/tests.md`, and `.agents/skills/tdd/declarative-over-procedural.md`.
+  - Assume this code will be inspected thoroughly in the future - "It's fine for now", "pre-existing issue", "not relevant to this change"
+  - Ignore spec criteria: "that's not needed yet" - that's not your decision.
+  - Avoid giving a clear verdict
+
+## Critical Rules
+
+**DO:**
+- Respect testing levels explicitly defined in the issue. If it calls for an integration test against a real service then write an integration test.
+
+
+
+# Verdict
+
+## Format
+
+  ```json
+  {
+    "spec_compliance": true,
+    "code_quality": {
+      "deep-modules.md": false,
+      "interface-design.md": true,
+      "refactoring.md": false,
+      "declarative-over-procedural.md": false,
+      "SOLID": true,
+      "DRY": true,
+      "YAGNI": true
+    },
+    "test_quality": {
+      "deep-modules.md": false,
+      "interface-design.md": true,
+      "mocking.md": false
+    },
+    "operational": true,
+    "violations": [
+      {
+        "principle": "Survivable Tests",
+        "file": "src/payment.ts:55",
+        "issue": "Internal collaborator mocked — tests will break on refactor"
+      }
+    ],
+    "review_notes": [
+      "All acceptance criteria met with passing tests",
+      "Mock at internal seam (payment.ts:55) violates Survivable Tests principle"
+    ],
+    "action": "changes_requested"
+  }
+  ```
+
+  ## Output
+  
+  Write the verdict JSON to the `outcome_path` if provided. Create parent directories if needed.

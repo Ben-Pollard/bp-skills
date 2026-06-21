@@ -42,7 +42,7 @@ Internally, scan all dimensions below. **Do not enumerate them to the user.** Si
 3. Seam placement (where behavior changes without editing in-place)
 4. Dependency direction (in-process → substitutable → remote → external)
 5. Domain boundaries / bounded contexts
-6. Code health — friction discovery (deletion test, shallow modules, tight coupling)
+6. Code health — friction discovery (deletion test, shallow modules, tight coupling, class cohesion — data and behavior colocated within classes)
 
 **Data:**
 7. Data models & schemas
