@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Use when about to claim work is complete, before committing or creating PRs. Also use to verify system behavior against a PRD's Behavioral Acceptance Criteria after all issues for that PRD are done. Requires running verification commands and confirming output before making any success claims; evidence before assertions always.
 ---
 
 # Verification Before Completion
@@ -96,8 +96,19 @@ Skip any step = lying, not verifying
 
 **Requirements:**
 ```
-✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
-❌ "Tests pass, phase complete"
+✅ Re-read PRD → Read Behavioral Acceptance Criteria → For each AC, determine verification command → Run it → Capture output → Report pass/fail with evidence
+❌ "Tests pass, phase complete" (tests ≠ behavioral verification)
+```
+
+**PRD-level verification (all issues done):**
+```
+✅ Load PRD → Read Behavioral Acceptance Criteria section → For each AC:
+       1. Determine command/check needed (e.g., `config-check --schema x.yaml` → expect exit 0)
+       2. Run against the running system
+       3. Capture output and exit status
+       4. Report PASS (evidence) or FAIL (actual vs expected)
+   Write verification report alongside PRD (e.g., PRD.md.verification.md)
+❌ Assume from reading code. ❌ Infer from "it should work." ❌ Trust agent reports.
 ```
 
 **Agent delegation:**
@@ -105,6 +116,57 @@ Skip any step = lying, not verifying
 ✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
 ❌ Trust agent report
 ```
+
+## PRD-Level Behavioral Verification
+
+When all issues for a PRD reach `done`, verify system behavior against the PRD's specification.
+
+### Process
+
+1. **Load the PRD** — find the PRD file (`.scratch/<slug>/PRD.md` or as provided)
+2. **Read Behavioral Acceptance Criteria** — the section with verbatim ACs from requirements
+3. **For each AC:**
+   1. **Determine** the command or check needed to verify it (e.g., `config-check --schema x.yaml` and expect exit 0)
+   2. **Run** the verification against the running system
+   3. **Capture** full output and exit status
+   4. **Report** PASS (with evidence) or FAIL (actual output vs expected)
+4. **Write verification report** alongside the PRD as `PRD.md.verification.md`
+
+### Report Format
+
+```
+# Verification Report: <PRD Title>
+
+## Summary
+- Passed: N
+- Failed: N
+- Skipped: N
+
+## Per-AC Results
+
+### AC-1: {text}
+**Status:** PASS | FAIL
+**Command:** `{verification command}`
+**Expected:** {expected behavior}
+**Actual:** {actual output / exit code}
+**Evidence:** {command output, log excerpts, file state}
+
+### AC-2: {text}
+...
+```
+
+### Edge Cases
+
+| Situation | Handling |
+|-----------|----------|
+| AC passes | Report PASS with evidence |
+| AC fails | Report FAIL with actual output vs expected |
+| System cannot start | Report all ACs as FAIL with startup error |
+| No behavioral ACs found in PRD | Report warning, skip verification |
+
+### The Gate applies
+
+PRD-level verification is subject to the same Iron Law and Gate Function above. You must run the actual commands and report actual output. Inferring pass/fail is lying.
 
 ## Why This Matters
 
@@ -124,6 +186,11 @@ From 24 failure memories:
 - Committing, PR creation, task completion
 - Moving to next task
 - Delegating to agents
+
+**Apply PRD-level verification when:**
+- All issues for a PRD reach `done`
+- Before marking a PRD as complete
+- Before a review or demo of the integrated system
 
 **Rule applies to:**
 - Exact phrases

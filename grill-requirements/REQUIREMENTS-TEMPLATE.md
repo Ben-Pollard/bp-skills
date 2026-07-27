@@ -38,8 +38,8 @@
 
 ## Acceptance Criteria
 
-- [ ] {Observable, testable condition}
-- [ ] {Observable, testable condition}
+- [ ] {Externally observable behavior — visible from outside the system}
+- [ ] {Externally observable behavior — visible from outside the system}
 
 ## Non-Functional Requirements
 

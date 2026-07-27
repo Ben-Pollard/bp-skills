@@ -26,7 +26,7 @@ If any of these don't exist, stop and tell the user which are missing. The pipel
 
 2. Map requirements to architecture:
    - User stories from the requirements doc become the "User Stories" section
-   - Behavioral scenarios and acceptance criteria inform the user stories
+   - Behavioral scenarios and acceptance criteria from the requirements doc are copied verbatim into the "Behavioral Acceptance Criteria" section (between User Stories and Implementation Decisions)
    - Module decisions, interface changes, technology choices from the gap analysis become the "Implementation Decisions" section
    - Test strategy from the gap analysis (dimension 28) and testability principles become the "Testing Decisions" section
    - Out of scope from the requirements doc becomes the "Out of Scope" section
@@ -54,6 +54,13 @@ A LONG, numbered list of user stories. Each user story should be in the format o
 </user-story-example>
 
 This list of user stories should be extremely extensive and cover all aspects of the feature.
+
+## Behavioral Acceptance Criteria
+
+The acceptance criteria from the requirements doc, carried forward verbatim. These describe externally observable system behavior used for PRD-level verification.
+
+- [ ] {AC from requirements doc}
+- [ ] {AC from requirements doc}
 
 ## Implementation Decisions
 
