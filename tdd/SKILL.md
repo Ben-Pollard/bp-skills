@@ -128,7 +128,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 
 ### 5. Commit and Report
 
-Commit all changes:
+If git is available, commit all changes:
 
 ```bash
 git add -A && git commit -m "<brief summary of what was built>"
