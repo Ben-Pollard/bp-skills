@@ -25,11 +25,9 @@ wc -l src/mypackage/*.py tests/**/*.py
 ### Step 2: For each module, answer the three questions
 
 **Question 1 — Already solved by stdlib/dep?**
-- Check `dataclasses.asdict()`, `functools`, `pathlib`, `os.path.expandvars`
-- Read the code looking for manual field-by-field mapping, isinstance chains, custom serialization
 
 **Question 2 — Solvable by adding a dep?**
-- Search for libraries that handle the pattern: use `context7` to query docs, web search for "python serialize dataclasses to JSON" etc.
+- Search for libraries that handle the pattern: use `context7` to query docs, web search for design patterns etc.
 - For each candidate library, estimate: current lines vs. lines with library, what code it absorbs
 - Weigh: one dep replacing manual code in 3+ modules is usually worth it
 
@@ -73,10 +71,10 @@ Output a reduction outcome document conforming to this schema:
 ## Library Discovery Workflow
 
 When Question 2 is active:
-1. Identify the procedural pattern (e.g. "manual isinstance validation", "hand-rolled JSON serialization")
-2. Use `context7_resolve-library-id` to find relevant libraries
-3. Use `context7_query-docs` to confirm the library handles the exact pattern
-4. Check `pyproject.toml` — is it already a dependency? If yes, audit moves to Question 1.
+1. Identify the procedural pattern (e.g. "validation", "JSON serialization")
+2. Use context7 or web search to find relevant libraries
+3. Use context7 to confirm the library handles the exact pattern
+4. Check `pyproject.toml` — is it already a dependency?
 
 
 ## Critical Rules
@@ -87,4 +85,4 @@ When Question 2 is active:
 
 **DON'T:**
 - Conclude "no library exists" without searching
-
+- Request changes for less than 20 lines worth of reduction across the whole codebase.

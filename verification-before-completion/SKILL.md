@@ -1,207 +1,79 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, before committing or creating PRs. Also use to verify system behavior against a PRD's Behavioral Acceptance Criteria after all issues for that PRD are done. Requires running verification commands and confirming output before making any success claims; evidence before assertions always.
+description: Use when verifying that implemented work satisfies behavioral acceptance criteria before merging, claiming completion, or handing off for human approval. Use when the system is ready to be exercised against its documented requirements.
 ---
 
 # Verification Before Completion
 
-## Overview
+Verify behavioral acceptance criteria against the live system. You are the last line of defence before human approval — the TDD agent scoped to this ticket, the reviewer scoped to this feature. You protect main from regressions and misalignment.
 
-Claiming work is complete without verification is dishonesty, not efficiency.
+**Core principle:** The system must be exercised, not read. Code is not behaviour. A running system is the only valid evidence.
 
-**Core principle:** Evidence before claims, always.
+## Fast-Fail Chain
 
-**Violating the letter of this rule is violating the spirit of this rule.**
-
-## The Iron Law
+Do not skip stages. Each stage gates the next. If a stage fails, stop and report — do not proceed to later stages.
 
 ```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+1. LINT / TYPE-CHECK → fail? STOP, report FAIL
+2. UNIT TESTS → fail? STOP, report FAIL
+3. INTEGRATION TESTS (full suite) → fail? STOP, report FAIL
+4. AC VERIFICATION → exercise each AC against the live system
 ```
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+Integration tests are not redundant. They test real infrastructure, configuration, and wiring that unit tests mock away. Skipping integration tests because "the unit tests cover the logic" is skipping the only tests that catch infrastructure regressions.
 
-## The Gate Function
+### Full suite means the whole project
 
-```
-BEFORE claiming any status or expressing satisfaction:
+Run every integration test in the test suite. Not just the module you changed. Not just the tests in the same directory as your changes.
 
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
-5. ONLY THEN: Make the claim
+A change in module A can break assumptions in module B. The integration test for module B may call module A's API — if you broke the contract, that test catches it. Running only the tests for the module you changed leaves every downstream consumer untested.
 
-Skip any step = lying, not verifying
-```
+"Full suite" means every integration test file in the project. No exceptions for "unrelated modules." If a module imports from your module or calls its API, it is related.
 
-## Common Failures
+## Live System Verification
 
-| Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
-| Tests pass | Full suite output: 0 failures | Previous run, selective re-run, "not my ticket" |
-| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
-| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
-| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Regression test works | Red-green cycle verified | Test passes once |
-| Selective verification | Full suite: every test green | Running only your subset, dismissing failures as "not my ticket" |
-| Agent completed | VCS diff shows changes | Agent reports "success" |
-| Requirements met | Line-by-line checklist | Tests passing |
+### Start the system
 
-## Red Flags - STOP
+Read the project's README and any docs linked from it. Follow the startup instructions exactly as a new user would. Start every service the system depends on. If the README is insufficient to start the system, every AC that requires a running system is CANT_VERIFY — that is a FAIL.
 
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
+### Exercise each AC
 
-## Rationalization Prevention
+For each acceptance criterion in the ticket's Requirements section:
 
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
-| "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
+1. Determine what event must be triggered and what behaviour must be observed — use the README, linked docs, and the AC's own description (log messages, HTTP endpoints, CLI commands, state transitions)
+2. Trigger the event against the live system
+3. Observe the result — `docker logs`, `curl`, `git log`, CLI output, HTTP responses
+4. Report PASS (with captured evidence) or FAIL (expected vs actual)
 
-## Key Patterns
+If the README and linked docs do not contain enough information to trigger an event or observe its result, report CANT_VERIFY. Insufficient documentation is a system failure.
 
-**Tests:**
-```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
+**Never verify an AC by reading source code.** A `logger.info()` call is not evidence that the log appears at runtime. A `return 200` line is not evidence that `/health` responds. Configuration, wiring, environment, and startup order all affect what actually runs. Only the live system tells the truth.
+
+## Output
+
+Write output as JSON. Report only failures and cannot-verify — passed ACs are implicit.
+
+```json
+{
+  "status": "PASS" | "FAIL",
+  "stage_results": {
+    "lint": {"passed": true},
+    "unit_tests": {"passed": 42, "failed": 0},
+    "integration_tests": {"passed": 18, "failed": 0}
+  },
+  "failed_acs": [
+    {
+      "id": "AC-01",
+      "text": "WHEN a ticket is in Ready state...",
+      "reason": "expected 'dispatching tdd' in docker logs, found nothing"
+    },
+    {
+      "id": "AC-31",
+      "text": "Given a ticket ID, the front end SHALL return...",
+      "reason": "CANT_VERIFY: front-end URL not documented in README"
+    }
+  ]
+}
 ```
 
-**Regression tests (TDD Red-Green):**
-```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
-❌ "I've written a regression test" (without red-green verification)
-```
-
-**Build:**
-```
-✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
-```
-
-**Requirements:**
-```
-✅ Re-read PRD → Read Behavioral Acceptance Criteria → For each AC, determine verification command → Run it → Capture output → Report pass/fail with evidence
-❌ "Tests pass, phase complete" (tests ≠ behavioral verification)
-```
-
-**PRD-level verification (all issues done):**
-```
-✅ Load PRD → Read Behavioral Acceptance Criteria section → For each AC:
-       1. Determine command/check needed (e.g., `config-check --schema x.yaml` → expect exit 0)
-       2. Run against the running system
-       3. Capture output and exit status
-       4. Report PASS (evidence) or FAIL (actual vs expected)
-   Write verification report alongside PRD (e.g., PRD.md.verification.md)
-❌ Assume from reading code. ❌ Infer from "it should work." ❌ Trust agent reports.
-```
-
-**Agent delegation:**
-```
-✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
-```
-
-## PRD-Level Behavioral Verification
-
-When all issues for a PRD reach `done`, verify system behavior against the PRD's specification.
-
-### Process
-
-1. **Load the PRD** — find the PRD file (`.scratch/<slug>/PRD.md` or as provided)
-2. **Read Behavioral Acceptance Criteria** — the section with verbatim ACs from requirements
-3. **For each AC:**
-   1. **Determine** the command or check needed to verify it (e.g., `config-check --schema x.yaml` and expect exit 0)
-   2. **Run** the verification against the running system
-   3. **Capture** full output and exit status
-   4. **Report** PASS (with evidence) or FAIL (actual output vs expected)
-4. **Write verification report** alongside the PRD as `PRD.md.verification.md`
-
-### Report Format
-
-```
-# Verification Report: <PRD Title>
-
-## Summary
-- Passed: N
-- Failed: N
-- Skipped: N
-
-## Per-AC Results
-
-### AC-1: {text}
-**Status:** PASS | FAIL
-**Command:** `{verification command}`
-**Expected:** {expected behavior}
-**Actual:** {actual output / exit code}
-**Evidence:** {command output, log excerpts, file state}
-
-### AC-2: {text}
-...
-```
-
-### Edge Cases
-
-| Situation | Handling |
-|-----------|----------|
-| AC passes | Report PASS with evidence |
-| AC fails | Report FAIL with actual output vs expected |
-| System cannot start | Report all ACs as FAIL with startup error |
-| No behavioral ACs found in PRD | Report warning, skip verification |
-
-### The Gate applies
-
-PRD-level verification is subject to the same Iron Law and Gate Function above. You must run the actual commands and report actual output. Inferring pass/fail is lying.
-
-## Why This Matters
-
-From 24 failure memories:
-- your human partner said "I don't believe you" - trust broken
-- Undefined functions shipped - would crash
-- Missing requirements shipped - incomplete features
-- Time wasted on false completion → redirect → rework
-- Violates: "Honesty is a core value. If you lie, you'll be replaced."
-
-## When To Apply
-
-**ALWAYS before:**
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
-
-**Apply PRD-level verification when:**
-- All issues for a PRD reach `done`
-- Before marking a PRD as complete
-- Before a review or demo of the integrated system
-
-**Rule applies to:**
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
-
-## The Bottom Line
-
-**No shortcuts for verification.**
-
-Run the command. Read the output. THEN claim the result.
-
-This is non-negotiable.
+`status` is PASS only if every stage passes and `failed_acs` is empty. If any stage fails or any AC fails or cannot be verified, `status` is FAIL.
