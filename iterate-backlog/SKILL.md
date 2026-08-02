@@ -9,6 +9,7 @@ description: Use when working through a backlog of implementation issues from a 
 
 Thin dispatcher. Reads one issue from a local markdown tracker, dispatches `implementer` and `reviewer` subagents, then marks the issue done. One issue per invocation. Does no implementation or review work inline when subagents are available.
 
+Agent skill sequence: tdd->requesting-code-review->receiving-code-review->minimizing-code->receiving-code-review->verification-before-completion->receiving-code-review
 
 ## Workflow
 
@@ -22,6 +23,16 @@ Read the issue: acceptance criteria, parent PRD/requirements reference, blocked-
 
 Change `Status:` to `in-progress`.
 
+### 2.5 Create or verify feature branch
+
+Branch name: `feat/<feature>` (derived from the issue's path directory under `.scratch/`).
+
+```bash
+git rev-parse --verify feat/<feature> 2>/dev/null || git checkout -b feat/<feature> main
+```
+
+If the branch already exists and the working tree is clean, stay on it. If the branch exists but has uncommitted changes, commit them first with a conventional commit message, then proceed.
+
 ### 3. Dispatch implementer subagent
 
 Extract `<feature>` from the issue's path (the directory under `.scratch/`). Derive outcome paths:
@@ -31,6 +42,7 @@ OUTCOMES_DIR = .scratch/<feature>/outcomes/
 IMPLEMENT_OUTCOME = .scratch/<feature>/outcomes/implement-outcome.json
 REVIEW_OUTCOME = .scratch/<feature>/outcomes/review-outcome.json
 REDUCTION_OUTCOME = .scratch/<feature>/outcomes/reduction-outcome.json
+VERIFY_OUTCOME = .scratch/<feature>/outcomes/verify-outcome.json
 ```
 
 Dispatch `implementer` subagent via Task tool with:
@@ -39,11 +51,14 @@ Dispatch `implementer` subagent via Task tool with:
 - Instruction: load the `tdd` skill, implement issue
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
-  - `commit`: `true` (create new commit on top of HEAD, never --amend)
+
+After implementer exits, read `IMPLEMENT_OUTCOME`. Commit the implementer's changes:
+
+```bash
+git add -A && git commit -m "<summary from outcome>"
+```
 
 ### 4. Dispatch reviewer subagent
-
-After implementer exits, read `IMPLEMENT_OUTCOME`.
 
 Dispatch `reviewer` subagent via Task tool with:
 - Issue body (acceptance criteria)
@@ -56,7 +71,7 @@ Dispatch `reviewer` subagent via Task tool with:
 
 Read `REVIEW_OUTCOME`. Parse the `action` field: `approved`, `changes-requested`, or `escalate`.
 
-**Changes requested:** Dispatch `implementer` subagent with review feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, go to step 4 (re-review — both code reviewer and reduction auditor re-run).
+**Changes requested:** Dispatch `implementer` subagent with review feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 4 (re-review).
 
 **Approved:** Proceed to step 5.5.
 
@@ -73,17 +88,31 @@ Dispatch `reviewer` subagent via Task tool with:
 
 Read `REDUCTION_OUTCOME`. Parse the `action` field.
 
-**Changes requested:** Dispatch `implementer` subagent with reduction feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, go to step 4 (re-review: both reviewer and reduction auditor must pass).
+**Changes requested:** Dispatch `implementer` subagent with reduction feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 5.5 (re-reduction).
 
 **Approved:** Proceed to step 6.
 
-### 6. Verify
+### 6. Dispatch verification subagent
 
-Load `verification-before-completion` skill. Run fresh test pass. Do NOT reuse results from implementation or fix phases — stale.
+Dispatch `general` subagent via Task tool with:
+- Issue body (acceptance criteria to verify)
+- Instruction: load `verification-before-completion` skill
+- Dispatch context:
+  - `outcome_path`: `VERIFY_OUTCOME`
+
+### 6.1 Handle verification verdict
+
+Read `VERIFY_OUTCOME`. Parse the `status` field: `PASS` or `FAIL`.
+
+**FAIL:** Dispatch `implementer` subagent with verification feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 6 (re-verify).
+
+  Verification failures are behavioral — the system doesn't do what the AC says it should. This is not a code quality issue that review or reduction would catch. Only fixing + re-verifying closes this gate. Do not loop back to review or reduction.
+
+**PASS:** Proceed to step 7.
 
 ### 7. Mark done
 
-Change `Status:` to `done`. Append `## Outcome` section with one-line summary. Reference `IMPLEMENT_OUTCOME`, `REVIEW_OUTCOME`, and `REDUCTION_OUTCOME` paths. Stop.
+Change `Status:` to `done`. Append `## Outcome` section with one-line summary. Reference `IMPLEMENT_OUTCOME`, `REVIEW_OUTCOME`, `REDUCTION_OUTCOME`, and `VERIFY_OUTCOME` paths. Stop.
 
 ### Subagent Failure
 
@@ -104,8 +133,21 @@ If any subagent hits serious doubt, review loop exceeds 3 rounds, or subagent re
 .scratch/<feature>/outcomes/
 ├── implement-outcome.json    # from implementer (overwritten on fix cycles)
 ├── review-outcome.json       # from reviewer (overwritten on re-review)
-└── reduction-outcome.json    # from reduction auditor (overwritten on re-audit)
+├── reduction-outcome.json    # from reduction auditor (overwritten on re-audit)
+└── verify-outcome.json       # from verification subagent (overwritten on re-verify)
 ```
+
+## Git Workflow
+
+One feature branch per feature directory. All tickets in the same feature stack commits on the same branch.
+
+**Branch creation:** `feat/<feature>` from `main`. Created on first ticket for the feature. Subsequent tickets continue on the existing branch.
+
+**Commits:** This skill commits after every implementer dispatch (initial TDD, review fixes, reduction fixes, verification fixes). Use conventional commits (agents determine appropriate prefix). Never --amend — each fix cycle produces a new commit.
+
+**No merge:** This skill does not merge. After all issues in the feature are done, the `finishing-a-development-branch` skill handles merge, PR, or cleanup.
+
+**Subagents never touch git.** Subagents write code and run tests. All git operations happen at the orchestrator level (this skill).
 
 
 ## Local Tracker Conventions
@@ -127,6 +169,7 @@ Blocked issues: skip if `Blocked by` references a non-terminal issue.
 - Implement code
 - Get a full understanding of the codebase
 - Pass the agents any code in their context: they will explore the codebase.
+- Instruct subagents to commit code — git is handled at this level.
 - Reuse test results from implementation phase — verification must be fresh.
 - Procede to next issue — one per invocation.
 - Review loop exceeding 3 rounds — escalate.

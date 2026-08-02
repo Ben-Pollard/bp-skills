@@ -40,7 +40,7 @@ Read the project's README and any docs linked from it. Follow the startup instru
 
 For each acceptance criterion in the ticket's Requirements section:
 
-1. Determine what event must be triggered and what behaviour must be observed — use the README, linked docs, and the AC's own description (log messages, HTTP endpoints, CLI commands, state transitions)
+1. Determine what event must be triggered and what behaviour must be observed — use the README, linked docs, and the AC's own description (log messages, HTTP endpoints, CLI commands, state transitions). Test the system the way a human would. Use browser automation tools/mcps to verify front-end behaviour.
 2. Trigger the event against the live system
 3. Observe the result — `docker logs`, `curl`, `git log`, CLI output, HTTP responses
 4. Report PASS (with captured evidence) or FAIL (expected vs actual)

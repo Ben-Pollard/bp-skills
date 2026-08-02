@@ -126,19 +126,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 [ ] No speculative features added
 ```
 
-### 5. Commit and Report
-
-If git is available, commit all changes:
-
-```bash
-git add -A && git commit -m "<brief summary of what was built>"
-```
-
-Get the commit SHA:
-
-```bash
-git rev-parse HEAD
-```
+### 5. Report
 
 When the checklist is complete, write the outcome file at the path provided by the orchestrator (`outcome_path`). Create parent directories if they don't exist.
 
@@ -151,7 +139,6 @@ When the checklist is complete, write the outcome file at the path provided by t
     "failed": 0,
     "skipped": 0
   },
-  "commit_sha": "abc123def456...",
   "concerns": []
 }
 ```

@@ -247,7 +247,6 @@ After all review items are addressed (fixed, pushed back, or blocked on clarific
     "failed": 0,
     "skipped": 0
   },
-  "commit_sha": "abc123def456...",
   "concerns": []
 }
 ```
