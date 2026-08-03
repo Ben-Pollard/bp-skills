@@ -65,13 +65,28 @@ Dispatch `reviewer` subagent via Task tool with:
 - Instruction: load `requesting-code-review` skill
 - Dispatch context:
   - `outcome_path`: `REVIEW_OUTCOME`
+  - Full issue body so the reviewer knows the acceptance criteria
 
 
 ### 5. Handle review verdict
 
 Read `REVIEW_OUTCOME`. Parse the `action` field: `approved`, `changes-requested`, or `escalate`.
 
-**Changes requested:** Dispatch `implementer` subagent with review feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 4 (re-review).
+**Changes requested:** Dispatch `implementer` subagent:
+- Instruction: load `receiving-code-review` skill.
+  ```
+  Load the `receiving-code-review` skill. Here is the feedback from the review. review_type: "standard". Fix the issues.
+  ```
+- Dispatch context:
+  - `outcome_path`: `IMPLEMENT_OUTCOME`
+  - Full `REVIEW_OUTCOME` JSON
+  - Issue body (acceptance criteria)
+
+After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
+- `DONE`: commit, go to step 4 (re-review)
+- `BLOCKED`: skip commit, change `Status: ready-for-human`, append `## Outcome` with block reason, **stop**
+
+**Escalate:** Change `Status: ready-for-human`, append `## Outcome` with escalation reason from `REVIEW_OUTCOME`, **stop**.
 
 **Approved:** Proceed to step 5.5.
 
@@ -88,13 +103,27 @@ Dispatch `reviewer` subagent via Task tool with:
 
 Read `REDUCTION_OUTCOME`. Parse the `action` field.
 
-**Changes requested:** Dispatch `implementer` subagent with reduction feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 5.5 (re-reduction).
+**Changes requested:** Dispatch `implementer` subagent:
+- Instruction: load `receiving-code-review` skill.
+  ```
+  Load the `receiving-code-review` skill. Here is the feedback from the reduction audit. review_type: "reduction". Fix the issues.
+  ```
+- Dispatch context:
+  - `outcome_path`: `IMPLEMENT_OUTCOME`
+  - Full `REDUCTION_OUTCOME` JSON
+  - Issue body (acceptance criteria)
+
+After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
+- `DONE`: commit, go to step 5.5 (re-reduction)
+- `BLOCKED`: skip commit, change `Status: ready-for-human`, append `## Outcome` with block reason, **stop**
+
+**Escalate:** Change `Status: ready-for-human`, append `## Outcome` with escalation reason from `REDUCTION_OUTCOME`, **stop**.
 
 **Approved:** Proceed to step 6.
 
 ### 6. Dispatch verification subagent
 
-Dispatch `general` subagent via Task tool with:
+Dispatch `reviewer` subagent via Task tool with:
 - Issue body (acceptance criteria to verify)
 - Instruction: load `verification-before-completion` skill
 - Dispatch context:
@@ -104,7 +133,19 @@ Dispatch `general` subagent via Task tool with:
 
 Read `VERIFY_OUTCOME`. Parse the `status` field: `PASS` or `FAIL`.
 
-**FAIL:** Dispatch `implementer` subagent with verification feedback and `receiving-code-review` skill. Provide `outcome_path` so it overwrites `IMPLEMENT_OUTCOME`. After fix subagent exits, commit and go to step 6 (re-verify).
+**FAIL:** Dispatch `implementer` subagent:
+- Instruction: load `receiving-code-review` skill.
+  ```
+  Load the `receiving-code-review` skill. Here is the feedback from the verification pass. review_type: "verification". Fix the issues.
+  ```
+- Dispatch context:
+  - `outcome_path`: `IMPLEMENT_OUTCOME`
+  - Full `VERIFY_OUTCOME` JSON
+  - Issue body (acceptance criteria)
+
+After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
+- `DONE`: commit, go to step 6 (re-verify)
+- `BLOCKED`: skip commit, change `Status: ready-for-human`, append `## Outcome` with block reason, **stop**
 
   Verification failures are behavioral — the system doesn't do what the AC says it should. This is not a code quality issue that review or reduction would catch. Only fixing + re-verifying closes this gate. Do not loop back to review or reduction.
 

@@ -1,264 +1,84 @@
+---
 name: receiving-code-review
-description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
+description: Use when the implementer subagent receives review, reduction, or verification feedback in the iterate-backlog fix loop — understands the violations, fixes code, runs tests, and reports the outcome.
 ---
 
-# Code Review Reception
+# Receiving Code Review
 
 ## Overview
 
-Code review requires technical evaluation, not emotional performance.
+Dispatched by `iterate-backlog` after a reviewer or verification subagent requests changes. One invocation handles all violations from a single review pass. Does not push back — the reviewer is a peer subagent with the same capabilities. If a fix is impossible, report BLOCKED and let the orchestrator escalate.
 
-**Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
-
-## The Response Pattern
+## Workflow
 
 ```
-WHEN receiving code review feedback:
-
-1. READ: Complete feedback without reacting
-2. UNDERSTAND: Restate requirement in own words (or ask)
-3. VERIFY: Check against codebase reality
-4. EVALUATE: Technically sound for THIS codebase?
-5. RESPOND: Technical acknowledgment or reasoned pushback
-6. IMPLEMENT: One item at a time, test each
+1. UNDERSTAND — Read the feedback. Identify what's wrong and why.
+2. FIX — One violation at a time. Blocking issues first, then simple, then complex.
+3. TEST — Run the test suite. Fix doesn't count until tests pass.
+4. REPORT — Write outcome to outcome_path.
 ```
 
-## Forbidden Responses
+## Review Types
 
-**NEVER:**
-- "You're absolutely right!" (explicit CLAUDE.md violation)
-- "Great point!" / "Excellent feedback!" (performative)
-- "Let me implement that now" (before verification)
+The `review_type` tag tells you which feedback format you're receiving.
 
-**INSTEAD:**
-- Restate the technical requirement
-- Ask clarifying questions
-- Push back with technical reasoning if wrong
-- Just start working (actions > words)
+### Standard Review (`review_type: "standard"`)
 
-## Handling Unclear Feedback
+Source: `requesting-code-review` outcome.
 
-```
-IF any item is unclear:
-  STOP - do not implement anything yet
-  ASK for clarification on unclear items
+Each violation has `{principle, file, issue}`. The outcome also has `code_quality` and `test_quality` fields with `true|false` per criterion — the failing criteria tell you which TDD skill docs to read.
 
-WHY: Items may be related. Partial understanding = wrong implementation.
-```
+Before fixing, read the TDD skill docs where criteria are `false`:
 
-**Example:**
-```
-your human partner: "Fix 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
+| Failing criterion | Doc to read |
+|---|---|
+| `deep-modules.md` | `.agents/skills/tdd/deep-modules.md` |
+| `interface-design.md` | `.agents/skills/tdd/interface-design.md` |
+| `refactoring.md` | `.agents/skills/tdd/refactoring.md` |
+| `declarative-over-procedural.md` | `.agents/skills/tdd/declarative-over-procedural.md` |
+| `mocking.md` | `.agents/skills/tdd/mocking.md` |
+| `tests.md` | `.agents/skills/tdd/tests.md` |
+| `SOLID`, `DRY`, `KISS`, `YAGNI` | (general principles — no doc needed) |
 
-❌ WRONG: Implement 1,2,3,6 now, ask about 4,5 later
-✅ RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
-```
+For each violation, read the referenced file, understand the issue, and fix it.
 
-## Source-Specific Handling
+### Reduction (`review_type: "reduction"`)
 
-### From your human partner
-- **Trusted** - implement after understanding
-- **Still ask** if scope unclear
-- **No performative agreement**
-- **Skip to action** or technical acknowledgment
+Source: `minimizing-code` outcome.
 
-### From External Reviewers
-```
-BEFORE implementing:
-  1. Check: Technically correct for THIS codebase?
-  2. Check: Breaks existing functionality?
-  3. Check: Reason for current implementation?
-  4. Check: Works on all platforms/versions?
-  5. Check: Does reviewer understand full context?
+Each violation has `{file_line, lines, replacement, question}`. The `replacement` field tells you exactly what to do. Apply the replacement, remove the eliminated code, run tests.
 
-IF suggestion seems wrong:
-  Push back with technical reasoning
+### Verification (`review_type: "verification"`)
 
-IF can't easily verify:
-  Say so: "I can't verify this without [X]. Should I [investigate/ask/proceed]?"
+Source: `verification-before-completion` outcome.
 
-IF conflicts with your human partner's prior decisions:
-  Stop and discuss with your human partner first
-```
+Each failure is in `failed_acs`: `{id, text, reason}`. The ticket (issue body) provides the full acceptance criteria. The `reason` field says what was expected vs observed. Trace the code, find the behavioral mismatch, fix it.
 
-**your human partner's rule:** "External feedback - be skeptical, but check carefully"
+These are behavioral failures — the system doesn't do what the AC says. Code quality or reduction changes won't fix them. Fix the behavior, then re-test.
 
-## YAGNI Check for "Professional" Features
+## Output
 
-```
-IF reviewer suggests "implementing properly":
-  grep codebase for actual usage
-
-  IF unused: "This endpoint isn't called. Remove it (YAGNI)?"
-  IF used: Then implement properly
-```
-
-**your human partner's rule:** "You and reviewer both report to me. If we don't need this feature, don't add it."
-
-## Implementation Order
-
-```
-FOR multi-item feedback:
-  1. Clarify anything unclear FIRST
-  2. Then implement in this order:
-     - Blocking issues (breaks, security)
-     - Simple fixes (typos, imports)
-     - Complex fixes (refactoring, logic)
-  3. Test each fix individually
-  4. Verify no regressions
-```
-
-## When To Push Back
-
-Push back when:
-- Suggestion breaks existing functionality
-- Reviewer lacks full context
-- Violates YAGNI (unused feature)
-- Technically incorrect for this stack
-- Legacy/compatibility reasons exist
-- Conflicts with your human partner's architectural decisions
-
-**How to push back:**
-- Use technical reasoning, not defensiveness
-- Ask specific questions
-- Reference working tests/code
-- Involve your human partner if architectural
-
-**Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
-
-## Acknowledging Correct Feedback
-
-When feedback IS correct:
-```
-✅ "Fixed. [Brief description of what changed]"
-✅ "Good catch - [specific issue]. Fixed in [location]."
-✅ [Just fix it and show in the code]
-
-❌ "You're absolutely right!"
-❌ "Great point!"
-❌ "Thanks for catching that!"
-❌ "Thanks for [anything]"
-❌ ANY gratitude expression
-```
-
-**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
-
-**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
-
-## Gracefully Correcting Your Pushback
-
-If you pushed back and were wrong:
-```
-✅ "You were right - I checked [X] and it does [Y]. Implementing now."
-✅ "Verified this and you're correct. My initial understanding was wrong because [reason]. Fixing."
-
-❌ Long apology
-❌ Defending why you pushed back
-❌ Over-explaining
-```
-
-State the correction factually and move on.
-
-## Common Mistakes
-
-| Mistake | Fix |
-|---------|-----|
-| Performative agreement | State requirement or just act |
-| Blind implementation | Verify against codebase first |
-| Batch without testing | One at a time, test each |
-| Assuming reviewer is right | Check if breaks things |
-| Avoiding pushback | Technical correctness > comfort |
-| Partial implementation | Clarify all items first |
-| Can't verify, proceed anyway | State limitation, ask for direction |
-
-## Real Examples
-
-**Performative Agreement (Bad):**
-```
-Reviewer: "Remove legacy code"
-❌ "You're absolutely right! Let me remove that..."
-```
-
-**Technical Verification (Good):**
-```
-Reviewer: "Remove legacy code"
-✅ "Checking... build target is 10.15+, this API needs 13+. Need legacy for backward compat. Current impl has wrong bundle ID - fix it or drop pre-13 support?"
-```
-
-**YAGNI (Good):**
-```
-Reviewer: "Implement proper metrics tracking with database, date filters, CSV export"
-✅ "Grepped codebase - nothing calls this endpoint. Remove it (YAGNI)? Or is there usage I'm missing?"
-```
-
-**Unclear Item (Good):**
-```
-your human partner: "Fix items 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
-✅ "Understand 1,2,3,6. Need clarification on 4 and 5 before implementing."
-```
-
-## GitHub Thread Replies
-
-When replying to inline review comments on GitHub, reply in the comment thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a top-level PR comment.
-
-## The Bottom Line
-
-**External feedback = suggestions to evaluate, not orders to follow.**
-
-Verify. Question. Then implement.
-
-No performative agreement. Technical rigor always.
-
-## Report
-
-After all review items are addressed (fixed, pushed back, or blocked on clarification), write the outcome file at the path provided by the orchestrator (`outcome_path`). Create parent directories if they don't exist.
+Write outcome JSON to `outcome_path`. Create parent directories if needed.
 
 ```json
 {
-  "status": "DONE",
-  "summary": "Addressed 3 review violations: removed dead _now param, removed unreachable FileNotFoundError handler, added dict validation for yaml.safe_load",
-  "violations_addressed": [
-    {
-      "principle": "YAGNI",
-      "file": "src/symphony/tracker/scratch.py",
-      "resolution": "fixed",
-      "detail": "Removed unused _now parameter and datetime import from __init__"
-    }
-  ],
-  "violations_pushed_back": [
-    {
-      "principle": "Survivable Tests",
-      "file": "tests/unit/test_config.py:42",
-      "resolution": "pushed_back",
-      "detail": "Test exercises public load_config() interface only — no internal mocking"
-    }
-  ],
-  "violations_unclear": [
-    {
-      "principle": "Interface Design",
-      "file": "src/symphony/config.py",
-      "detail": "Unclear whether config should be a class or module-level functions — asking reviewer"
-    }
-  ],
-  "test_results": {
-    "passed": 45,
-    "failed": 0,
-    "skipped": 0
-  },
-  "concerns": []
+  "status": "DONE" | "BLOCKED",
+  "summary": "<one-line description of what was fixed, or reason blocked>"
 }
 ```
 
-### Status values
+- `DONE` — all violations fixed, tests pass
+- `BLOCKED` — cannot proceed (can't find file, fix breaks tests and can't resolve, can't find satisfactory solution, permissions issues, etc.)
 
-- `DONE` — all feedback addressed, tests pass, committed
-- `DONE_WITH_CONCERNS` — completed but have doubts about the resolution
-- `BLOCKED` — cannot proceed (e.g., waiting on reviewer clarification)
+## Critical Rules
 
-### Resolution values
+**DO:**
+- Fix one violation at a time, test each
+- Fix ordering: blocking issues first (breaks, security), then simple fixes, then complex refactoring
+- Run the full test suite after all fixes
+- Report BLOCKED if the fix is impossible
 
-- `fixed` — applied the fix
-- `pushed_back` — verified and disagreed with technical reasoning
-- `unclear` — waiting on reviewer clarification before acting
+**DON'T:**
+- Push back on reviewer feedback — reviewer is a peer subagent
+- Skip tests after fixing
+- Implement unrelated changes
