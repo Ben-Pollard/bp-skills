@@ -9,6 +9,8 @@ description: Test-driven development with red-green-refactor loop. Use when user
 
 **Core principle**: Tests should verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't.
 
+**Second principle**: You are responsible for the behavioural scenario succeeding, not just the ACs passing. The ticket's user stories and behavioural scenarios describe what a human would observe. ACs are evidence points along that path — not independent checkboxes. An AC is satisfied only when the live system demonstrates the full behavioural scenario. A log line that fires but the pipeline never runs is code, not behaviour. The system will be verified based on this principle, using readme.md (and any docs referred to by it) as a guide for a human to use the system in practice. If they cannot get it to work, you have failed.
+
 **Good tests** are integration-style: they exercise real code paths through public APIs. They describe _what_ the system does, not _how_ it does it. A good test reads like a specification - "user can checkout with valid cart" tells you exactly what capability exists. These tests survive refactors because they don't care about internal structure.
 
 **Bad tests** are coupled to implementation. They mock internal collaborators, test private methods, or verify through external means (like querying a database directly instead of using the interface). The warning sign: your test breaks when you refactor, but behavior hasn't changed. If you rename an internal function and tests fail, those tests were testing implementation, not behavior.
@@ -45,6 +47,14 @@ You implement via test-driven development. But don't forget best practices: SOLI
 
 ## Workflow
 
+### 0. System Intent
+
+Before any code or test, read the ticket's behavioural scenarios and user stories. Understand the end-to-end path this ticket enables. Identify what a human would observe when the system works.
+
+Ask: **"What wire must exist? What runtime evidence proves this behavioural scenario succeeds from end to end?"**
+
+This is not about interface design or test priorities — that comes next. This is about understanding what it means to be done. Your answer defines your first tracer bullet.
+
 ### 1. Planning
 
 When exploring the codebase, refer to CONTEXT.md so that test names and interface vocabulary match the project's language, and respect ADRs in the area you're touching (docs/adr).
@@ -75,14 +85,18 @@ Focus testing effort on critical paths and complex logic, not every possible edg
 
 ### 2. Tracer Bullet
 
-Write ONE test that confirms ONE thing about the system:
+Write ONE test that proves the system wire — the end-to-end path from the behavioural scenario:
 
 ```
-RED:   Write test for first behavior → test fails
-GREEN: Write minimal code to pass → test passes
+RED:   Write test tracing the behavioural scenario's critical path → test fails
+GREEN: Write code connecting every component on that path → test passes
 ```
 
-This is your tracer bullet - proves the path works end-to-end.
+This is your tracer bullet. It proves the wire exists — that components are connected and the system traverses the path described in the ticket's behavioural scenarios. If the scenario says "poll discovers ticket, dispatches pipeline, commits result, advances state," a tracer bullet exercises that entire chain, not just one step.
+
+A module-level unit test is not a tracer bullet. A tracer bullet traces through the integration boundary — it proves components communicate, not that each works in isolation.
+
+If the Testing Decisions section of the ticket specifies a test level ladder (e.g. node → pipeline → E2E), your tracer bullet must start at the highest level you can practically exercise in the first pass. Do not stop at node tests and declare the tracer bullet done.
 
 ### 3. Incremental Loop
 
@@ -97,8 +111,9 @@ Rules:
 
 - One test at a time
 - Only enough code to pass current test
+- "Only enough code" means don't add modules not yet needed. It does NOT mean skip the wire between components the test exercises. If the test calls `tick()` and expects a state transition, the code must contain the full chain from `tick()` through to the state transition — not just a log line at the entry point. Skipping wiring is not minimal code; it's incomplete behaviour.
 - Don't anticipate future tests
-- Keep tests focused on observable behavior
+- Keep tests focused on observable behaviour
 
 ### 4. Refactor
 

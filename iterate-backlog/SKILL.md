@@ -46,7 +46,7 @@ VERIFY_OUTCOME = .scratch/<feature>/outcomes/verify-outcome.json
 ```
 
 Dispatch `implementer` subagent via Task tool with:
-- Full issue body (acceptance criteria, what to build)
+- Full issue body
 - Relevant sections from the parent PRD and/or docs/architecture/gap-analysis.md. ONLY if they add valuable context to the issue. DO NOT include context that will confuse the implementer about the scope of its work.
 - Instruction: load the `tdd` skill, implement issue
 - Dispatch context:
@@ -61,11 +61,10 @@ git add -A && git commit -m "<summary from outcome>"
 ### 4. Dispatch reviewer subagent
 
 Dispatch `reviewer` subagent via Task tool with:
-- Issue body (acceptance criteria)
+- Issue body
 - Instruction: load `requesting-code-review` skill
 - Dispatch context:
   - `outcome_path`: `REVIEW_OUTCOME`
-  - Full issue body so the reviewer knows the acceptance criteria
 
 
 ### 5. Handle review verdict
@@ -80,7 +79,7 @@ Read `REVIEW_OUTCOME`. Parse the `action` field: `approved`, `changes-requested`
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `REVIEW_OUTCOME` JSON
-  - Issue body (acceptance criteria)
+  - Issue body
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 4 (re-review)
@@ -111,7 +110,7 @@ Read `REDUCTION_OUTCOME`. Parse the `action` field.
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `REDUCTION_OUTCOME` JSON
-  - Issue body (acceptance criteria)
+  - Issue body
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 5.5 (re-reduction)
@@ -205,6 +204,8 @@ Blocked issues: skip if `Blocked by` references a non-terminal issue.
 
 **DO:**
 - Ensure the intent expressed in the docs is clear and well scoped
+- Ensure the full issue is passed to every subagent — user stories, behavioral scenarios, What to Build, Testing Decisions, and architectural constraints are equally binding
+- On re-review, dispatch a fresh reviewer with no "verify fixes" framing — same prompt as the initial review
 
 **DON'T:**
 - Implement code
@@ -214,4 +215,3 @@ Blocked issues: skip if `Blocked by` references a non-terminal issue.
 - Reuse test results from implementation phase — verification must be fresh.
 - Procede to next issue — one per invocation.
 - Review loop exceeding 3 rounds — escalate.
-- Define return schemas - they are defined in the skills.
