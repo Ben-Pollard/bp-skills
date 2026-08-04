@@ -1,26 +1,17 @@
 ---
-name: verification-before-completion
+name: qa
 description: Use when verifying that implemented work satisfies behavioral acceptance criteria before merging, claiming completion, or handing off for human approval. Use when the system is ready to be exercised against its documented requirements.
 ---
 
-# Verification Before Completion
+# Golden Rule
+If you find that you have to read the code or tests in order to verify then the implementation has failed. You are a tester, not a developer.
 
-**Your job is to find failures, not to confirm successes.** You are the last line of defence before a human discovers misalignment. Default to scepticism. Treat every AC as a chance to prove the system *doesn't* work. Only when the live system survives every test do you report PASS.
+# Behavioural Verification
+
+**Your job is to find failures, not to confirm successes.** You are the last line of defence before a human discovers misalignment. Only when the live system meets the full INTENT of the ticket, based on all behavioural scenarios, user stories and ACs do you report PASS.
 
 **Core principle:** Code is not behaviour. The system must be exercised, not read. A running system is the only valid evidence.
 
-**Violating the letter of the rules is violating the spirit of the rules.** You may not reinterpret rules to avoid work or justify a faster path. If you suspect you are rationalising, you are.
-
-## Fast-Fail Chain
-
-Do not skip stages. Each stage gates the next. If a stage fails, stop immediately and report FAIL — do not proceed to later stages.
-
-```
-1. LINT / TYPE-CHECK → fail? STOP, report FAIL
-2. UNIT TESTS → fail? STOP, report FAIL
-3. INTEGRATION TESTS (full suite) → fail? STOP, report FAIL
-4. AC VERIFICATION → exercise each AC against the live system
-```
 
 **What counts as a stage failure:**
 
@@ -35,15 +26,12 @@ Do not skip stages. Each stage gates the next. If a stage fails, stop immediatel
 
 If the project has no services to integrate (single library, no external dependencies), zero integration tests is a neutral finding, not a failure. Use judgment based on the project's architecture.
 
-### Full suite means every test in the project
-
-Run every integration test file. Not just the module you changed. Not just the directory you edited. A change in module A can break assumptions in module B. The full suite protects all downstream consumers.
 
 ## Live System Verification
 
 ### Follow the documented process — do not fix it
 
-Read the project's README and any docs linked from it. Follow the startup instructions exactly as a new user would. Start every service the system depends on.
+Read the project's README and any docs linked from it. Do not read any code. Follow the startup instructions exactly as a new human user would. Start every service the system depends on, based on the documentation. Not documented? CANT_VERIFY. Following documentation doesn't successfully start the system? FAIL.
 
 **Do not go beyond the documented process.** If the README says `docker compose up` and that fails, report the failure. You are verifying the system's readiness, not repairing it. If the container runs stale code and the README says `docker compose up` without a rebuild step, the system as documented is broken.
 
@@ -68,7 +56,7 @@ All three are failures. A system that cannot be started by following its own doc
 
 ### Interpret the ACs
 
-ACs are behavioural contracts. They describe what a human would observe when using the system. Do not narrow an AC's scope to make it easier to verify.
+ACs must be interpreted as representations of the full behavioural intent of the ticket. If an AC is tested in a way where it could pass but some other aspect of the ticket would not be validated then the AC test is inadequate.
 
 ```
 AC: "Tickets grouped by project in logs AND Plane UI"
@@ -96,7 +84,7 @@ For each acceptance criterion in the ticket:
 1. Determine what event must be triggered and what behaviour must be observed
 2. Trigger the event against the live system
 3. Observe the result — `docker logs`, `curl`, `git log`, CLI output, HTTP responses, browser automation
-4. Report PASS (with captured evidence) or FAIL (expected vs actual). if FAIL, you can explain how this relates to other parts of the ticket than the narrow AC criteria.
+4. Report PASS, FAIL, BLOCKED, or CANT_VERIFY. 
 
 If the README and linked docs do not contain enough information to trigger an event or observe its result, report CANT_VERIFY. Insufficient documentation is a system failure.
 

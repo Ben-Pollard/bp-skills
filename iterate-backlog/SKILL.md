@@ -17,8 +17,6 @@ Agent skill sequence: tdd->requesting-code-review->receiving-code-review->minimi
 
 Scan `<dir>/issues/` for files with `Status: ready-for-agent`. Pick lowest `NN`. If none, stop. If multiple feature dirs exist, ask which one. Skip issues with non-terminal blockers.
 
-Read the issue: acceptance criteria, parent PRD/requirements reference, blocked-by.
-
 ### 2. Mark in-progress
 
 Change `Status:` to `in-progress`.
@@ -47,10 +45,10 @@ VERIFY_OUTCOME = .scratch/<feature>/outcomes/verify-outcome.json
 
 Dispatch `implementer` subagent via Task tool with:
 - Full issue body
-- Relevant sections from the parent PRD and/or docs/architecture/gap-analysis.md. ONLY if they add valuable context to the issue. DO NOT include context that will confuse the implementer about the scope of its work.
 - Instruction: load the `tdd` skill, implement issue
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
+- Full instructions are included in the skill. Do not supply additional ones.
 
 After implementer exits, read `IMPLEMENT_OUTCOME`. Commit the implementer's changes:
 
@@ -61,7 +59,7 @@ git add -A && git commit -m "<summary from outcome>"
 ### 4. Dispatch reviewer subagent
 
 Dispatch `reviewer` subagent via Task tool with:
-- Issue body
+- Full issue body
 - Instruction: load `requesting-code-review` skill
 - Dispatch context:
   - `outcome_path`: `REVIEW_OUTCOME`
@@ -79,7 +77,7 @@ Read `REVIEW_OUTCOME`. Parse the `action` field: `approved`, `changes-requested`
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `REVIEW_OUTCOME` JSON
-  - Issue body
+  - Full issue body
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 4 (re-review)
@@ -97,6 +95,7 @@ Dispatch `reviewer` subagent via Task tool with:
 - Instruction: load `minimizing-code` skill
 - Dispatch context:
   - `outcome_path`: `REDUCTION_OUTCOME`
+- Full instructions are included in the skill. Do not supply additional ones.
 
 ### 5.6 Handle reduction verdict
 
@@ -110,7 +109,6 @@ Read `REDUCTION_OUTCOME`. Parse the `action` field.
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `REDUCTION_OUTCOME` JSON
-  - Issue body
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 5.5 (re-reduction)
@@ -123,10 +121,11 @@ After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 ### 6. Dispatch verification subagent
 
 Dispatch `reviewer` subagent via Task tool with:
-- Issue body (acceptance criteria to verify)
-- Instruction: load `verification-before-completion` skill
+- Full issue body
+- Instruction: load `qa` skill
 - Dispatch context:
   - `outcome_path`: `VERIFY_OUTCOME`
+- Full instructions are included in the skill. Do not supply additional ones.
 
 ### 6.1 Handle verification verdict
 
@@ -140,13 +139,12 @@ Read `VERIFY_OUTCOME`. Parse the `status` field: `PASS` or `FAIL`.
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `VERIFY_OUTCOME` JSON
-  - Issue body (acceptance criteria)
+  - Full issue body
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 6 (re-verify)
 - `BLOCKED`: skip commit, change `Status: ready-for-human`, append `## Outcome` with block reason, **stop**
 
-  Verification failures are behavioral — the system doesn't do what the AC says it should. This is not a code quality issue that review or reduction would catch. Only fixing + re-verifying closes this gate. Do not loop back to review or reduction.
 
 **PASS:** Proceed to step 7.
 

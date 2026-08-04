@@ -15,7 +15,9 @@ Code that:
   - Does the implementation match the intent of the ticket? The intent is never that code should exist but that the system should behave a certain way when a human new to the system starts using it. 
   - **Trace the call chain end-to-end.** If the behavioural scenario says "poll discovers, dispatches, advances," verify the code contains every link. A log line at the entry point does not prove the chain completes. Proximity is not connectivity — presence of a call at step 1 is not evidence step 2 runs.
   - All planned functionality present? No extra features not requested?
-  - **Testing levels met?** Read the Testing Decisions section. Count the test levels specified (e.g. node → pipeline → E2E = 3 levels). Verify every level exists in the test suite. A missing level is a spec violation — not a test quality niggle. `pytest` collecting 0 integration tests when the issue calls for them is a hard FAIL.
+  - **Full test suite passes** Run every integration test file. Not just the module you changed. Not just the directory you edited. A change in module A can break assumptions in module B. The full suite protects all downstream consumers.
+  - **Testing levels met?** Read the Testing Decisions section. Count the test levels specified (e.g. node → pipeline → E2E = 3 levels). Verify every level exists in the test suite. A missing level is a spec violation — not a test quality niggle. `pytest` collecting 0 integration tests when the issue calls for them is a hard FAIL. 
+
 
   **Test quality** — read `.agents/skills/tdd/tests.md`, `.agents/skills/tdd/deep-modules.md`, and `.agents/skills/tdd/mocking.md`. Do the tests adhere to these principles?
 
