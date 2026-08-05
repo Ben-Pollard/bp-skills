@@ -78,7 +78,6 @@ Write outcome JSON to `outcome_path`. Create parent directories if needed.
 ## Critical Rules
 
 **DO:**
-- Fix one violation at a time, test each
 - Fix ordering: blocking issues first (breaks, security), then simple fixes, then complex refactoring
 - Run the full test suite after all fixes
 - Report BLOCKED if the fix is impossible
@@ -86,4 +85,10 @@ Write outcome JSON to `outcome_path`. Create parent directories if needed.
 **DON'T:**
 - Push back on reviewer feedback — reviewer is a peer subagent
 - Skip tests after fixing
-- Implement unrelated changes
+
+
+## Evaluation
+- Your work will be re-reviewed and QA'd.
+- The ultimate gate is whether someone new to the project can, based on the readme (or docs it references), use it in the way that is intended.
+- If you fail review you will have to keep working on the ticket.
+- This might influence your choice of tests: what tests would prove not only that the code is 'correct' but that the system can be used?
