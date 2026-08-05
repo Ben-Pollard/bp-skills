@@ -1,13 +1,13 @@
 ---
 name: receiving-code-review
-description: Use when the implementer subagent receives review, reduction, or verification feedback in the iterate-backlog fix loop — understands the violations, fixes code, runs tests, and reports the outcome.
+description: Use when the implementer subagent receives review, reduction, or qa feedback in the iterate-backlog fix loop — understands the violations, fixes code, runs tests, and reports the outcome.
 ---
 
 # Receiving Code Review
 
 ## Overview
 
-Dispatched by `iterate-backlog` after a reviewer or verification subagent requests changes. One invocation handles all violations from a single review pass. Does not push back — the reviewer is a peer subagent with the same capabilities. If a fix is impossible, report BLOCKED and let the orchestrator escalate.
+Dispatched by `iterate-backlog` after a reviewer or qa subagent requests changes. One invocation handles all violations from a single review pass. Does not push back — the reviewer is a peer subagent with the same capabilities.
 
 ## Workflow
 
@@ -48,13 +48,15 @@ Source: `minimizing-code` outcome.
 
 Each violation has `{file_line, lines, replacement, question}`. The `replacement` field tells you exactly what to do. Apply the replacement, remove the eliminated code, run tests.
 
-### Verification (`review_type: "verification"`)
+### QA (`review_type: "qa"`)
 
-Source: `verification-before-completion` outcome.
+Source: `qa` outcome.
 
 Each failure is in `failed_acs`: `{id, text, reason}`. The ticket (issue body) provides the full acceptance criteria. The `reason` field says what was expected vs observed. Trace the code, find the behavioral mismatch, fix it.
 
 These are behavioral failures — the system doesn't do what the AC says. Code quality or reduction changes won't fix them. Fix the behavior, then re-test.
+
+**Green tests + broken live system = insufficient test coverage.** When the QA reports FAIL with every `stage_result` passing (lint, unit tests, integration tests all green) but the live system is visibly broken, your job is not just to fix the code — it is to write the test that would have caught the gap. A QA failure that slipped past all existing tests means the test suite is missing a behavioural wire. Add an integration or E2E test that exercises the exact path the QA found broken before you fix the code. Then fix the code. Then run both the new test and the full suite.
 
 ## Output
 

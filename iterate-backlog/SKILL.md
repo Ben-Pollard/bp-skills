@@ -9,7 +9,7 @@ description: Use when working through a backlog of implementation issues from a 
 
 Thin dispatcher. Reads one issue from a local markdown tracker, dispatches `implementer` and `reviewer` subagents, then marks the issue done. One issue per invocation. Does no implementation or review work inline when subagents are available.
 
-Agent skill sequence: tdd->requesting-code-review->receiving-code-review->minimizing-code->receiving-code-review->verification-before-completion->receiving-code-review
+Agent skill sequence: tdd->requesting-code-review->receiving-code-review->minimizing-code->receiving-code-review->qa->receiving-code-review
 
 ## Workflow
 
@@ -118,7 +118,7 @@ After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 
 **Approved:** Proceed to step 6.
 
-### 6. Dispatch verification subagent
+### 6. Dispatch qa subagent
 
 Dispatch `reviewer` subagent via Task tool with:
 - Full issue body
@@ -127,14 +127,14 @@ Dispatch `reviewer` subagent via Task tool with:
   - `outcome_path`: `VERIFY_OUTCOME`
 - Full instructions are included in the skill. Do not supply additional ones.
 
-### 6.1 Handle verification verdict
+### 6.1 Handle qa verdict
 
 Read `VERIFY_OUTCOME`. Parse the `status` field: `PASS` or `FAIL`.
 
 **FAIL:** Dispatch `implementer` subagent:
 - Instruction: load `receiving-code-review` skill.
   ```
-  Load the `receiving-code-review` skill. Here is the feedback from the verification pass. review_type: "verification". Fix the issues.
+  Load the `receiving-code-review` skill. Here is the feedback from the qa pass. review_type: "qa". Fix the issues.
   ```
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
@@ -172,7 +172,7 @@ If any subagent hits serious doubt, review loop exceeds 3 rounds, or subagent re
 ├── implement-outcome.json    # from implementer (overwritten on fix cycles)
 ├── review-outcome.json       # from reviewer (overwritten on re-review)
 ├── reduction-outcome.json    # from reduction auditor (overwritten on re-audit)
-└── verify-outcome.json       # from verification subagent (overwritten on re-verify)
+└── qa-outcome.json       # from qa subagent (overwritten on re-qa)
 ```
 
 ## Git Workflow
@@ -181,7 +181,7 @@ One feature branch per feature directory. All tickets in the same feature stack 
 
 **Branch creation:** `feat/<feature>` from `main`. Created on first ticket for the feature. Subsequent tickets continue on the existing branch.
 
-**Commits:** This skill commits after every implementer dispatch (initial TDD, review fixes, reduction fixes, verification fixes). Use conventional commits (agents determine appropriate prefix). Never --amend — each fix cycle produces a new commit.
+**Commits:** This skill commits after every implementer dispatch (initial TDD, review fixes, reduction fixes, qa fixes). Use conventional commits (agents determine appropriate prefix). Never --amend — each fix cycle produces a new commit.
 
 **No merge:** This skill does not merge. After all issues in the feature are done, the `finishing-a-development-branch` skill handles merge, PR, or cleanup.
 
