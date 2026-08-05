@@ -172,6 +172,6 @@ Use `DONE_WITH_CONCERNS` if you completed but have doubts. Use `BLOCKED` if you 
 
 ## Evaluation
 - Your work will be reviewed and QA'd.
-- The ultimate gate is whether someone new to the project can, based on the readme (or docs it references), use it in the way that is intended.
+- The ultimate gate is a whether human new to the project and following the README would see - in the live system - the behaviour described by the full INTENT of the ticket, based on all behavioural scenarios, user stories and ACs.
 - If you fail review you will have to keep working on the ticket.
-- This might influence your choice of tests: what tests would prove not only that the code is 'correct' but that the system can be used?
+- This should influence your choice of tests: what tests would prove not only that the code is 'correct' but that the system can be used?
