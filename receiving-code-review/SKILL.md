@@ -46,7 +46,10 @@ For each violation, read the referenced file, understand the issue, and fix it.
 
 Source: `minimizing-code` outcome.
 
-Each violation has `{file_line, lines, replacement, question}`. The `replacement` field tells you exactly what to do. Apply the replacement, remove the eliminated code, run tests.
+Each violation has `{file_line, lines, replacement, question, classification}`. The `classification` field tells you what to do:
+
+- **`"delete"`** — The code is genuinely unnecessary. Apply the `replacement`, remove the eliminated code, run tests.
+- **`"wire-in"`** — The code matches a ticket requirement but isn't connected to the system. The `replacement` field describes the integration target. Follow TDD discipline to integrate the code and verify the integration. The violation's `lines` count is not a deletion target — it's the amount of currently-unwired code that will become live.
 
 ### QA (`review_type: "qa"`)
 

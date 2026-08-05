@@ -35,6 +35,15 @@ wc -l src/mypackage/*.py tests/**/*.py
 - For every function: grep for callers. If only called from tests or not called at all (and not an entrypoint) → dead code candidate.
 - Look for duplicated logic across modules/functions (same pattern appearing twice)
 
+### Step 2.5: Classify Q3 violations with ticket context
+
+After completing the audit, consider the ticket's issue body (provided by the orchestrator in context). For each Q3 violation (dead code), classify it against the ticket's requirements:
+
+- **"delete"** — Code is genuinely unnecessary. No requirement in the ticket's What to Build, Acceptance Criteria, Architectural Constraints, Behavioral Scenarios, or User Stories mandates this code.
+- **"wire-in"** — Code matches a requirement in the ticket. The code should be connected to the system rather than deleted. Set `replacement` to a concrete integration instruction (e.g., "Wire DockerSandbox.create() into orchestrator/main.py dispatch flow to satisfy AC-1").
+
+For "wire-in" violations, the `reduction` number still counts as eliminable since code that was dead would become live once the changes take effect.
+
 ### Step 3: Produce the reduction outcome
 
 Output a reduction outcome document conforming to this schema:
@@ -58,15 +67,16 @@ Output a reduction outcome document conforming to this schema:
       "file_line": "<file:line>",
       "lines": <int>,
       "replacement": "<what would replace it>",
-      "question": <1 | 2 | 3>
+      "question": <1 | 2 | 3>,
+      "classification": "<wire-in | delete>"
     }
   ],
   "review_notes": "<summary>",
-  "action": "approved | changes-requested | escalate"
+  "action": "approved | changes-requested"
 }
 ```
 
-`reduction_table` rows capture the table from the audit — exact line numbers, exact library names, exact deltas. `violations` are the file violations (file:line, line count, replacement, which question applies). `action` drives the iterate-backlog workflow. Keep it concrete — no hand-waving.
+`reduction_table` rows capture the table from the audit — exact line numbers, exact library names, exact deltas. `violations` are the file violations (file:line, line count, replacement, which question applies, and whether the code should be wired in or deleted). `action` drives the iterate-backlog workflow. Keep it concrete — no hand-waving.
 
 ## Library Discovery Workflow
 
@@ -85,4 +95,5 @@ When Question 2 is active:
 
 **DON'T:**
 - Conclude "no library exists" without searching
-- Request changes for less than 20 lines worth of reduction across the whole codebase.
+- Request changes for less than a sum of 25 total lines worth of reduction
+- Delete code that fulfills a ticket requirement — classify those violations as "wire-in" and specify where the code should be integrated instead

@@ -92,6 +92,7 @@ After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 After reviewer approves, dispatch a fresh `reviewer` subagent for a code reduction audit:
 
 Dispatch `reviewer` subagent via Task tool with:
+- Full issue body
 - Instruction: load `minimizing-code` skill
 - Dispatch context:
   - `outcome_path`: `REDUCTION_OUTCOME`
@@ -109,6 +110,7 @@ Read `REDUCTION_OUTCOME`. Parse the `action` field.
 - Dispatch context:
   - `outcome_path`: `IMPLEMENT_OUTCOME`
   - Full `REDUCTION_OUTCOME` JSON
+  - Full issue body (so the implementer knows ticket requirements when wiring in code)
 
 After fix subagent exits, read `IMPLEMENT_OUTCOME`. Parse `status`:
 - `DONE`: commit, go to step 5.5 (re-reduction)
