@@ -18,8 +18,7 @@ If you find that you have to read the code or tests in order to verify then the 
 | Stage | FAIL condition |
 |-------|---------------|
 | Lint | Any lint error or type-check error (warnings count as fail if the project enforces them) |
-| Unit tests | Any test fails, OR zero tests collected (empty = not tested) |
-| Integration tests | Any test fails, zero tests collected, test directory missing, OR tests cannot be collected (import error, dependency issue) |
+| Tests | Any test skips or fails, zero tests collected, test directory missing, OR tests cannot be collected (import error, dependency issue) |
 | AC verification | Any AC fails, any AC is CANT_VERIFY, the live system cannot be started, OR a blocking gap prevents exercising the user story / scenario |
 
 **Zero collected tests = FAIL when the project has components to integrate.** If the project has a multi-service setup (Docker Compose, external APIs, databases, message queues, proxy servers), the absence of integration tests means infrastructure and wiring regressions have zero coverage. `pytest` reporting `0 passed, 0 failed` is not a pass — it means nothing was tested.
@@ -116,7 +115,7 @@ If an AC describes front-end behaviour (UI, dashboard, web interface, visual sta
 
 During verification you may discover gaps, prerequisites, or bugs that were not known when the ticket was written. These are valuable insights — do not discard them.
 
-Report discovered gaps in the output under `discovered_blockers`. Each entry describes what blocked progress and why it matters. This ensures the human sees the full picture, not just pass/fail per AC.
+Report discovered gaps in the output under `discovered_blockers`. Each entry describes what blocked progress and why it matters. This ensures the human sees the full picture, not just pass/fail per AC. If a blocker is discovered, status is FAIL: the ticket may be satisfied from a code perspective but the system still doesn't demonstrably work.
 
 ## Output
 
@@ -127,8 +126,9 @@ Write output as JSON. Report only failures, cannot-verify entries, blocked items
   "status": "PASS" | "FAIL" | "BLOCKED",
   "stage_results": {
     "lint": {"passed": true},
-    "unit_tests": {"passed": 42, "failed": 0, "collected": 42},
-    "integration_tests": {"passed": 18, "failed": 0, "collected": 18}
+    "unit_tests": {"passed": 42, "failed": 0, "skipped": 42},
+    "integration_tests": {"passed": 18, "failed": 0, "skipped": 18},
+    "e2e_tests": {"passed": 18, "failed": 0, "skipped": 18}
   },
   "failed_acs": [
     {
@@ -146,7 +146,7 @@ Write output as JSON. Report only failures, cannot-verify entries, blocked items
   ],
   "discovered_blockers": [
     {
-      "what": "Plane DB credentials and user setup not documented in README",
+      "what": "DB credentials and user setup not documented in README",
       "impact": "prevents exercising the scenario 'create ticket in Plane, watch it transition' — ACs are unreachable"
     },
     {
@@ -161,28 +161,26 @@ Write output as JSON. Report only failures, cannot-verify entries, blocked items
 
 | Status | When |
 |--------|------|
-| PASS | Every fast-fail stage passed, every AC passed against the live system, `failed_acs` is empty, nothing blocked, no discovere blockers |
-| FAIL | Any stage failed, any AC failed, any AC is CANT_VERIFY, the live system cannot be started, or a discovered gap blocks exercising the scenario |
-| BLOCKED | A necessary tool or access is unavailable and cannot be obtained automatically (e.g. browser requires `sudo`). Human escalation needed. |
+| PASS | Every fast-fail stage passed. Behaviour implied by whole ticket demonstrated by running the live system for real. `failed_acs` is empty, no blocked_items, no discovered_blockers. |
+| FAIL | Any stage failed, any AC failed, any AC is CANT_VERIFY, the live system cannot be started, or a scenario cannot complete. |
+| BLOCKED | A necessary tool or access is unavailable and cannot be obtained automatically (e.g. no browser automation, no `sudo`). Human escalation needed. The system may or may not be correct — you cannot determine which. |
 
-BLOCKED is for external dependencies beyond your control. FAIL is for system inadequacies. If an AC is blocked AND other ACs fail, report FAIL (the system has failures regardless of the blocked check).
 
 ## Red Flags — STOP and Report FAIL
 
-If you encounter any of these, stop. You are rationalising:
+If you do any of these, stop. You are rationalising:
 
 - "0 passed, 0 failed — that's technically not a failure"
 - "The code looks right, the config/environment is just wrong"
 - "I can verify this by reading the implementation"
-- "The unit tests cover this code path"
+- "The tests cover this code path"
 - "I can skip browser testing — the DOM structure is visible in the source"
-- "All code paths are verified by passing unit tests"
+- "All code paths are verified by passing tests"
 - "No live tickets were discovered, but the code handles this case"
-- "This AC is about code structure, not runtime behaviour"
+- "This AC is about code, not runtime behaviour"
 - "It would take too long to set up the live system properly"
-- "I'll just set up Plane / fix the config / create the user so we can verify"
+- "I'll just set up this requirement / fix the config / create the user so we can verify"
 - "The AC doesn't mention this gap so it doesn't count as a failure"
-- "I should verify this discovery before I report it"
 
 **All of these mean: you are finding reasons to pass. Your job is to find reasons to fail.**
 
@@ -192,9 +190,9 @@ If you encounter any of these, stop. You are rationalising:
 |--------|-----|
 | Treating `pytest` output `0 passed, 0 failed` as PASS | Zero collected = FAIL when project has services to integrate. |
 | Skipping browser automation because "unit tests cover the DOM" | UI ACs require live browser verification. No substitute. If unavailable, report BLOCKED. |
-| Passing ACs when the live system shows errors | System errors = FAIL. Fixing them yourself = going beyond boundary. |
-| Fixing setup gaps (creating Plane users, configuring DBs) | Follow the README. If it's insufficient, that IS the failure. Report it. |
-| Reading source code to verify behaviour | Behaviour requires runtime observation. |
+| Passing ACs when the live system does not provide evidence that the code line ran | System errors = FAIL. Fixing them yourself = going beyond boundary. |
+| Fixing setup gaps (creating users, configuring DBs) | Follow the README. If it's insufficient, that IS the failure. Report it. |
+| Using source code or tests to verify behaviour | Behaviour requires runtime observation. |
 | Narrowing ACs to "code does X" instead of "system does Y" | ACs are behavioural. Test what a human would see. |
 | Discarding discovered gaps because they're not in the ACs | Gaps that block scenarios are failures. Report them in `discovered_blockers`. |
 | Stopping after lint/tests without attempting the live system | Stage 4 is mandatory. Every AC needing the live system must be exercised. |
