@@ -3,3 +3,5 @@
 *.swo
 *~
 setup-matt-pocock-skills/agents.code-workspace
+
+.opencode/opencode-loop/

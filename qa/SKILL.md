@@ -18,7 +18,7 @@ If you find that you have to read the code or tests in order to verify then the 
 | Stage | FAIL condition |
 |-------|---------------|
 | Lint | Any lint error or type-check error (warnings count as fail if the project enforces them) |
-| Tests | Any test skips or fails, zero tests collected, test directory missing, OR tests cannot be collected (import error, dependency issue) |
+| Tests | Any test skips, fails, times out of or cannot be collected |
 | AC verification | Any AC fails, any AC is CANT_VERIFY, the live system cannot be started, OR a blocking gap prevents exercising the user story / scenario |
 
 **Zero collected tests = FAIL when the project has components to integrate.** If the project has a multi-service setup (Docker Compose, external APIs, databases, message queues, proxy servers), the absence of integration tests means infrastructure and wiring regressions have zero coverage. `pytest` reporting `0 passed, 0 failed` is not a pass — it means nothing was tested.
@@ -121,14 +121,16 @@ Report discovered gaps in the output under `discovered_blockers`. Each entry des
 
 Write output as JSON. Report only failures, cannot-verify entries, blocked items, and discovered blockers — passed ACs are implicit.
 
+Do not make any statement that is not backed by evidence. If you guess at the reason for something, the next agent will try to fix a phantom problem. If you don't know why something is happening prompt the next agent to write a test or improve system observability so that the problem becomes more visible.
+
 ```json
 {
   "status": "PASS" | "FAIL" | "BLOCKED",
   "stage_results": {
     "lint": {"passed": true},
-    "unit_tests": {"passed": 42, "failed": 0, "skipped": 42},
-    "integration_tests": {"passed": 18, "failed": 0, "skipped": 18},
-    "e2e_tests": {"passed": 18, "failed": 0, "skipped": 18}
+    "unit_tests": {"passed": 42, "failed": 0, "skipped": 42, "timed_out": 1},
+    "integration_tests": {"passed": 18, "failed": 0, "skipped": 18, "timed_out": 1},
+    "e2e_tests": {"passed": 0, "failed": 0, "skipped": 0, "timed_out": 5}
   },
   "failed_acs": [
     {
@@ -147,12 +149,23 @@ Write output as JSON. Report only failures, cannot-verify entries, blocked items
   "discovered_blockers": [
     {
       "what": "DB credentials and user setup not documented in README",
-      "impact": "prevents exercising the scenario 'create ticket in Plane, watch it transition' — ACs are unreachable"
+      "impact": "prevents exercising the scenario 'create ticket in Plane, watch it transition' — ACs are unreachable",
+      "evidence": "Attempted startup following README exactly, but nowhere in the documentation is there a step for configuring a Plane DB or creating a user. Without these, the system throws connection errors at startup and no AC can be exercised."
     },
     {
       "what": "Plane workspace slug my-workspace does not exist",
-      "impact": "PlaneTracker.list_ready returns no tickets — ACs requiring live tickets cannot be verified"
-    }
+      "impact": "PlaneTracker.list_ready returns no tickets — ACs requiring live tickets cannot be verified",
+      "evidence": "Ran the documented startup, then called the list_ready endpoint — response was empty array. Traced the issue to the Plane API returning 404 for workspace 'my-workspace', which is a prerequisite not mentioned in any setup docs."
+    },
+    {
+      "what": "System build & startup process not documented",
+      "impact": "prevents proving the live system works by following the documentation",
+      "evidence": "README contains no build or startup instructions. There is a docker-compose.yml but no mention of it in the docs. A new user reading the README would have no way to get the system running."
+    },
+    {
+      "what": "Insufficient debug logging",
+      "impact": "prevents identification of issues in the live system",
+      "evidence": "Triggered ticket state transitions and inspected docker logs — only INFO-level startup messages appeared, no per-request or per-transition log lines. The AC requires observing state transitions in logs, but nothing is emitted at runtime."
   ]
 }
 ```
@@ -163,7 +176,7 @@ Write output as JSON. Report only failures, cannot-verify entries, blocked items
 |--------|------|
 | PASS | Every fast-fail stage passed. Behaviour implied by whole ticket demonstrated by running the live system for real. `failed_acs` is empty, no blocked_items, no discovered_blockers. |
 | FAIL | Any stage failed, any AC failed, any AC is CANT_VERIFY, the live system cannot be started, or a scenario cannot complete. |
-| BLOCKED | A necessary tool or access is unavailable and cannot be obtained automatically (e.g. no browser automation, no `sudo`). Human escalation needed. The system may or may not be correct — you cannot determine which. |
+| BLOCKED | A necessary tool or access is unavailable and cannot be obtained automatically (e.g. missing system package, no `sudo`, missing secret). Human escalation needed. The system may or may not be correct — you cannot determine which. |
 
 
 ## Red Flags — STOP and Report FAIL
