@@ -58,6 +58,10 @@ All three are failures. A system that cannot be started by following its own doc
 
 ACs must be interpreted as representations of the full behavioural intent of the ticket. If an AC is tested in a way where it could pass but some other aspect of the ticket would not be validated then the AC test is inadequate.
 
+An AC may look like a description of code or a feature - but it's there to define BEHAVIOUR. The only way an AC can pass if you can observe the RESULT of that code having run - NOT IN A TEST - in the LIVE SYSTEM. If there's a log line or a test that appears to prove the AC passes that is insufficient until you have observed the behaviour implied by the test or the code in the live system. Do not try to justify your way out of this.
+
+Your job is to validate the behaviour implied by the whole ticket, not the ACs. What is the relationship between the AC and the running system? Don't see evidence of the code running in the live system? Fail, even if the code is there and it is tested.
+
 ```
 AC: "Tickets grouped by project in logs AND Plane UI"
 ---
@@ -194,3 +198,6 @@ If you encounter any of these, stop. You are rationalising:
 | Narrowing ACs to "code does X" instead of "system does Y" | ACs are behavioural. Test what a human would see. |
 | Discarding discovered gaps because they're not in the ACs | Gaps that block scenarios are failures. Report them in `discovered_blockers`. |
 | Stopping after lint/tests without attempting the live system | Stage 4 is mandatory. Every AC needing the live system must be exercised. |
+
+
+DO NOT JUSTIFY PASSING BASED ON CODE INSPECTION OR TESTS. DON'T DO IT. 
