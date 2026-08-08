@@ -49,9 +49,9 @@ You implement via test-driven development. But don't forget best practices: SOLI
 
 ### 0. System Intent
 
-Before any code or test, read the ticket's behavioural scenarios and user stories. Understand the end-to-end path this ticket enables. Identify what a human would observe when the system works.
+Before any code or test, read the ticket's **What Done Means** — the one-sentence bar: "After this ticket, a user following the README can do X and observe Y." This is your target. Then read the behavioural scenarios and user stories to understand the full path.
 
-Ask: **"What wire must exist? What runtime evidence proves this behavioural scenario succeeds from end to end?"**
+Ask: **"What wire must exist? What runtime evidence proves a user following the README can do X and observe Y from end to end?"**
 
 This is not about interface design or test priorities — that comes next. This is about understanding what it means to be done. Your answer defines your first tracer bullet.
 
@@ -67,6 +67,7 @@ HITL mode:
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
 - [ ] Design interfaces for [testability](interface-design.md)
 - [ ] List the behaviors to test (not implementation steps)
+- [ ] Update README (or linked docs) with instructions for starting and exercising this slice. If QA can't start the system by following the README, the slice is not done.
 - [ ] Get user approval on the plan
 
 Ask: "What should the public interface look like? Which behaviors are most important to test?"
@@ -78,6 +79,7 @@ AFK mode:
 - [ ] Identify what behaviors to test (prioritize)
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
 - [ ] Design interfaces for [testability](interface-design.md)
+- [ ] Update README (or linked docs) with instructions for starting and exercising this slice. If QA can't start the system by following the README, the slice is not done.
 
 Focus testing effort on critical paths and complex logic, not every possible edge case.
 
@@ -139,6 +141,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 [ ] Test would survive internal refactor
 [ ] Code is minimal for this test
 [ ] No speculative features added
+[ ] README/docs updated — a human following them can start and exercise this slice
 ```
 
 ### 5. Report

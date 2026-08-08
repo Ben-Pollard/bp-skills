@@ -15,7 +15,7 @@ The issue tracker and triage label vocabulary should have been provided to you �
 
 Read ALL of:
 
-- `docs/requirements/<aspect>.md` — one or more requirements files (user stories, domain context, behavioral scenarios, acceptance criteria, non-functional requirements, out of scope)
+- `docs/requirements/<aspect>.md` — one or more requirements files (definition of done, user stories, domain context, behavioral scenarios, acceptance criteria, non-functional requirements, out of scope)
 - `docs/architecture/gap-analysis.md` — module interfaces, ADR decisions, testing strategy, required changes
 - `docs/adr/` — ADRs referenced by the gap analysis
 - `CONTEXT.md` — domain glossary (for consistent terminology)
@@ -38,17 +38,33 @@ Break the plan into **tracer bullet** issues. Each issue is a thin vertical slic
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
 
-### 4. Assign source content to slices
+### 4. Converge on ticket-level done
 
-For each slice, identify which sections of the source docs it implements. The union of all slices MUST cover the union of all source docs — no material may be dropped. Every user story, AC, architectural decision, module interface, testing decision, and domain constraint must be assigned to at least one ticket.
+For each draft slice, derive a ticket-level "What Done Means" from the feature Definition of Done. This is the subset of the end-to-end human path that this slice enables. Present each slice with:
+
+- **Title**: short descriptive name
+- **What Done Means**: one sentence — "After this ticket, a user following the README can [do X, observe Y]"
+- **Blocked by**: which other slices (if any) must complete first
+
+Quiz the user:
+
+- Does the ticket-level done accurately capture what this slice enables?
+- Do any slices need re-drafting because the DoD alignment revealed a gap?
+- Does any slice lack a clear "done means" (no demoable outcome)?
+
+Iterate — re-draft slices if necessary — until the user approves the DoD alignment.
+
+### 5. Assign source content to slices
+
+For each slice, identify which sections of the source docs it implements. The union of all slices MUST cover the union of all source docs — no material may be dropped. Every user story, AC, architectural decision, module interface, testing decision, domain constraint, and the Definition of Done must be assigned to at least one ticket.
 
 This is a distribution step, not a compilation step. Source content is assigned verbatim.
 
 Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such as an architectural decision or a design review. AFK slices can be implemented and merged without human interaction. Prefer AFK over HITL where possible.
 
-### 5. Quiz the user
+### 6. Quiz the user on granularity and dependencies
 
-Present the proposed breakdown as a numbered list. For each slice, show:
+Present the content-assigned breakdown. For each slice, show:
 
 - **Title**: short descriptive name
 - **Type**: HITL / AFK
@@ -65,13 +81,14 @@ Ask the user:
 
 Iterate until the user approves the breakdown.
 
-### 6. Verify coverage
+### 7. Verify coverage
 
 Before publishing, verify that no source material was dropped. Walk through each source doc section-by-section and confirm it is assigned to at least one ticket. Specifically:
 
 - Every user story from the requirements doc
 - Every behavioral scenario
 - Every acceptance criterion (AC-xx)
+- The Definition of Done (assigned to all tickets — any slice whose ticket-level done doesn't advance the feature DoD is misaligned)
 - Every module interface definition from the gap analysis
 - Every architectural decision (ADR and inline) from the gap analysis
 - Every testing decision from the gap analysis
@@ -81,7 +98,7 @@ Before publishing, verify that no source material was dropped. Walk through each
 
 Report any unassigned material to the user and ask for placement. Do not publish until all source material is accounted for.
 
-### 7. Publish the issues to the issue tracker
+### 8. Publish the issues to the issue tracker
 
 For each approved slice, publish a new issue to the issue tracker. Publish issues in dependency order (blockers first) so you can reference real issue identifiers in the "Blocked by" field. Apply the `ready-for-agent` triage label unless instructed otherwise.
 
@@ -94,6 +111,14 @@ Use the issue body template below. Do NOT close or modify any parent issue.
 - Architecture: `docs/architecture/gap-analysis.md`
 - ADRs: {list referenced ADR numbers}
 - Glossary: `CONTEXT.md`
+
+## What Done Means
+
+**Feature-level** (verbatim from the requirements doc):
+
+{Copy the Definition of Done section verbatim from the requirements doc.}
+
+**This ticket:** After this ticket, a user following the README can {do X, observe Y}. This is the subset of the feature DoD that this slice enables.
 
 ## What to Build
 

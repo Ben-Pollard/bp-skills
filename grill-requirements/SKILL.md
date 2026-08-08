@@ -19,7 +19,7 @@ Multiple aspects can be covered in one session. When the current aspect is fully
 
 Requirements describe WHAT the system must do. Architecture describes HOW we'll build it. This session stays firmly on the WHAT side.
 
-**In scope:** Problem statements, user stories, behavioral scenarios, acceptance criteria, domain descriptions, non-functional concerns, priority, scope boundaries.
+**In scope:** Problem statements, definition of done, user stories, behavioral scenarios, acceptance criteria, domain descriptions, non-functional concerns, priority, scope boundaries.
 
 **Out of scope:** Module design, interface contracts, data schemas, technology choices, deployment models, seam placement. Those live in `/grill-architecture`.
 
@@ -34,6 +34,7 @@ Requirements describe WHAT the system must do. Architecture describes HOW we'll 
 - [ ] **One question at a time.** Walk each branch of the requirements tree to completion before moving laterally.
 - [ ] **Provide a recommended answer** with every question. Don't ask open-ended — propose and let me correct.
 - [ ] **Distinguish intent from verification.** For each requirement, first surface the user story ("what do you want to achieve and why?"), then push for the acceptance criterion ("how will you know it's done? what observable outcome tells you it works?"). Every AC must describe something observable from outside the system — a log line, a file created, a process exit, a container state change, a network response. If it can't be observed without reading source code, it's architecture, not a requirement.
+- [ ] **Converge on a Definition of Done.** Throughout the conversation, probe for what success looks like from the user's perspective: "When this system is done, what does a user actually do and see?" Help the human crystallize a short, end-to-end description — "I do X, the system does Y, I see Z." Don't demand it as a fixed step; let it emerge as the conversation sharpens understanding. By the time scenarios and ACs are written, the DoD should be clear. Write it as a short paragraph in the output doc.
 - [ ] **Push back on vague language.** "The system should handle it" → "What does 'handle' mean? What are the specific outcomes?"
 - [ ] **Test with concrete scenarios.** Invent edge cases. "What happens when the user has no items? What about concurrent access?" Write these up as Behavioral Scenarios before extracting ACs from them — the scenario comes first, ACs are extracted from it, not the other way round.
 - [ ] **Use CONTEXT.md vocabulary.** If I use a term that conflicts with the glossary, surface it. If a new domain concept emerges, propose adding it to CONTEXT.md using [CONTEXT-FORMAT.md](../grill-architecture/CONTEXT-FORMAT.md).
@@ -103,6 +104,7 @@ Run these as distinct passes. They catch different failure modes and one does no
 - [ ] No architectural decisions have leaked in (no tech choices, no interface designs, no module names) anywhere in the doc.
 
 **2. Coverage check (semantic — did we capture everything, which no grammar can verify for you):**
+- [ ] A Definition of Done exists — a short paragraph describing what the user does and sees when the system works end-to-end.
 - [ ] Every Behavioral Scenario has at least one AC citing it. Zero-citation scenarios are holes — go back and grill them.
 - [ ] Re-reading only the cited ACs for a given scenario reconstructs that scenario's important steps. If it doesn't, the atomization has lost something the prose scenario had — add an AC or revise the scenario.
 - [ ] Every question resolved during grilling has its answer reflected somewhere in the doc.

@@ -39,6 +39,7 @@ Before fixing, read the TDD skill docs where criteria are `false`:
 | `mocking.md` | `.agents/skills/tdd/mocking.md` |
 | `tests.md` | `.agents/skills/tdd/tests.md` |
 | `SOLID`, `DRY`, `KISS`, `YAGNI` | (general principles — no doc needed) |
+| `documentation: false` | README or linked docs are missing or don't match the implementation. Update them so a human can start and exercise the system by following the docs. See the reviewer's violations for specifics. |
 
 For each violation, read the referenced file, understand the issue, and fix it.
 

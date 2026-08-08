@@ -13,6 +13,7 @@ Code that:
 
   **Spec compliance:**
   - Does the implementation match the intent of the ticket? The intent is never that code should exist but that the system should behave a certain way when a human new to the system starts using it. 
+  - **Does the implementation match the ticket's What Done Means?** After this ticket, can a human following the README do X and observe Y? If not, the slice is not done regardless of test coverage.
   - **Trace the call chain end-to-end.** If the behavioural scenario says "poll discovers, dispatches, advances," verify the code contains every link. A log line at the entry point does not prove the chain completes. Proximity is not connectivity — presence of a call at step 1 is not evidence step 2 runs.
   - All planned functionality present? No extra features not requested?
   - **Full test suite passes** Run every integration test file. Not just the module you changed. Not just the directory you edited. A change in module A can break assumptions in module B. The full suite protects all downstream consumers.
@@ -33,7 +34,7 @@ Code that:
 
   **Operational:**
   - Security risks?
-  - Docs match what was built?
+  - **README/docs updated for this slice?** Can a human, following only the README (and docs it links to), start the system and exercise the behavior this ticket enables? If startup instructions are missing, incomplete, or don't work, the documentation is broken. Missing docs = operational false.
 
   ## Output Format
 
@@ -72,6 +73,7 @@ Code that:
   - "The code structure looks right, the wire will work" (proximity is not connectivity)
   - "No integration tests but the unit tests are solid" (if the issue calls for them, missing = FAIL)
   - "They said the previous 7 violations were resolved" (verify the full system, not the claim)
+  - "The docs are a bit out of date but the code works" (broken docs = broken system — QA can't verify it)
 
   **All of these mean: you are reviewing surface fixes, not the system.**
 
@@ -98,6 +100,7 @@ Code that:
       "interface-design.md": true,
       "mocking.md": false
     },
+    "documentation": false,
     "operational": true,
     "violations": [
       {

@@ -55,7 +55,7 @@ All three are failures. A system that cannot be started by following its own doc
 
 ### Interpret the ACs
 
-ACs must be interpreted as representations of the full behavioural intent of the ticket. If an AC is tested in a way where it could pass but some other aspect of the ticket would not be validated then the AC test is inadequate.
+ACs must be interpreted as representations of the full behavioural intent of the ticket. The ticket's **What Done Means** section defines the human path this slice enables — "After this ticket, a user following the README can do X and observe Y." This is the bar. ACs are evidence points along that path, not independent checkboxes. If an AC is tested in a way where it could pass but the human path in What Done Means is not demonstrably exercisable, the implementation has failed.
 
 An AC may look like a description of code or a feature - but it's there to define BEHAVIOUR. The only way an AC can pass if you can observe the RESULT of that code having run - NOT IN A TEST - in the LIVE SYSTEM. If there's a log line or a test that appears to prove the AC passes that is insufficient until you have observed the behaviour implied by the test or the code in the live system. Do not try to justify your way out of this.
 

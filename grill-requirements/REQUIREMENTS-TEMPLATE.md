@@ -14,6 +14,12 @@
 
 {What does the system need to do? Describe the desired outcome and behavior. }
 
+## Definition of Done
+
+> Form: short paragraph (2-4 sentences). Describes what a user actually does and sees when the system works end-to-end. The test: "I do X, the system does Y, I see Z." This is the bar every downstream skill evaluates against — tickets are slices of this path, ACs are evidence points along it, QA verifies it on the live system. No architecture, no implementation detail. Just the human experience of a working system.
+
+{I submit a ticket via the UI, an agent completes the work, I see the result in git and the ticket shows as done in the tracker.}
+
 ## User Stories
 
 > Form: `As a **{actor}**, I want **{feature}**, so that **{benefit}**.` One per bullet, no nesting, no IDs. Not independently checkable — these are read, not queried, and nothing downstream cites a story by number. 
