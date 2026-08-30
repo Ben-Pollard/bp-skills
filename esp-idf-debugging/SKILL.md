@@ -9,6 +9,60 @@ description: Use when an ESP-IDF project has crashes (Guru Meditation, panic, ab
 
 Systematic diagnostic ladder for ESP-IDF on embedded targets. Work from lowest-cost signal (log) to highest-fidelity insight (JTAG). At every rung, produce a hypothesis before escalating.
 
+## Pre-flight — Context Gathering
+
+Before the ladder, collect context. If `project.env` exists at project root (from `esp32-init`), read it — answers most questions below.
+
+### 1. Confirm this is an ESP-IDF project
+
+Check `project.env` exists (fastest signal). If absent, fall back to `CMakeLists.txt` containing `project()` and `sdkconfig` or `sdkconfig.defaults`.
+
+| When you see | Conclusion |
+|---|---|
+| `project.env` `ESP_TARGET=esp32s3` | Chip is ESP32-S3, port is in `ESP_PORT`, board is in `ESP_BOARD` |
+| No `project.env` but `CMakeLists.txt` + `sdkconfig.defaults` | Project exists, probe `CONFIG_IDF_TARGET` from sdkconfig |
+| Neither | Stop — not an ESP-IDF project |
+
+### 2. Activate the IDF environment
+
+```bash
+eim list                              # see installed versions
+eim select <major-version>            # e.g. v6.1 or v5.3
+source <path-to-esp-idf>/export.sh    # activates idf.py, gdb, openocd in PATH
+```
+
+If `eim` not found, try `source` directly on a known `export.sh` path or check `ESP_IDF_VERSION` from `project.env`.
+
+### 3. Confirm device connection
+
+Read `ESP_PORT` from `project.env`:
+
+```bash
+idf.py -p <ESP_PORT> monitor  # boot log appears → connected
+```
+
+If no boot log, try `ls /dev/tty*` (Linux) or `ls /dev/cu.*` (macOS) to find the port. If no port found at all, Rungs 3–4 are unreachable. Rungs 1–2 (log analysis, Kconfig recommendations) still work.
+
+### 4. Confirm debug symbol availability
+
+`build/<ESP_PROJECT_NAME>.elf` must exist and be newer than source. Without it, core dump decode and GDB fail.
+
+```bash
+ls -l build/*.elf              # exists?
+stat -c %Y build/*.elf         # when was it built?
+```
+
+If stale, `idf.py build` first.
+
+### 5. Determine toolchain prefix from target
+
+| `ESP_TARGET` | GDB binary |
+|---|---|
+| esp32, esp32s2, esp32s3 | `xtensa-esp32-elf-gdb` |
+| esp32c3, esp32c6, esp32h2, esp32p4 | `riscv32-esp-elf-gdb` |
+
+Used in Rung 3 (GDB Stub) and Rung 4 (OpenOCD). If `project.env` is missing, read `CONFIG_IDF_TARGET` from `sdkconfig`. If neither exists, guess from `build/bootloader/` ELF names.
+
 ## When to Use
 
 - Any ESP-IDF crash, hang, or misbehaviour on real hardware
@@ -21,8 +75,8 @@ Do NOT use for: host-side Linux unit tests (no target involved), build errors (c
 
 | Symptom | First step | Escalate to |
 |---|---|---|
-| Boot loop / panic | `idf.py -p <port> monitor` — read panic reason, EXCVADDR, backtrace | Core dump decode (`idf.py coredump-info` or `idf.py coredump-debug`) |
-| Wrong behaviour, no crash | `ESP_LOGW/TAG` at key points; check Kconfig log level | GDB Stub runtime (`CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME`) via `gdb -batch` over UART, or OpenOCD script |
+| Boot loop / panic | `idf.py -p ${ESP_PORT} monitor` — read panic reason, EXCVADDR, backtrace | Core dump decode (`idf.py coredump-info` or `idf.py coredump-debug`) |
+| Wrong behaviour, no crash | `ESP_LOGW/TAG` at key points; check Kconfig log level | GDB Stub runtime (`CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME`) via `${TOOLCHAIN_PREFIX}-gdb -batch` over UART, or OpenOCD script |
 | Task starvation / watchdog | Check TWDT config (`CONFIG_ESP_TASK_WDT`); add `vTaskDelay()` or yield | `vTaskGetRunTimeStats()` or `xTaskGetTickCount()` deltas in log |
 | Memory corruption | Enable `CONFIG_HEAP_CORRUPTION_DETECTION` (strong), stack watchpoints, heap poisoning | Core dump analysis or `heap_caps_get_info()` dumps |
 | Peripheral not responding | `ioctl`-style register read via monitor; verify init ordering and GPIO mux | OpenOCD register inspection script |
@@ -74,21 +128,21 @@ CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME=y
 Run monitor, send `Ctrl+C`, then launch batch GDB:
 
 ```bash
-xtensa-esp32-elf-gdb -batch \
-  -ex "target remote /dev/ttyUSB0" \
+${TOOLCHAIN_PREFIX}-gdb -batch \
+  -ex "target remote ${ESP_PORT}" \
   -ex "thread apply all bt" \
   -ex "p temp_sensor" \
-  build/project.elf
+  build/${ESP_PROJECT_NAME}.elf
 ```
 
 Batch commands: `bt`, `info locals`, `p <var>`, `thread <id>`, `list`, `x/<fmt> <addr>`.
 
 ### Rung 4 — OpenOCD Scripted JTAG
 
-For timing-sensitive bugs or hardware-level inspection. OpenOCD exposes a telnet interface — script it:
+For timing-sensitive bugs or hardware-level inspection. Board config depends on target — find it under `openocd-esp32/share/openocd/scripts/board/`:
 
 ```bash
-openocd -f board/esp32s3-builtin.cfg & \
+openocd -f board/${ESP_TARGET}-builtin.cfg & \
   sleep 2 && \
   echo "halt; reg; resume; exit" | telnet localhost 4444
 ```
