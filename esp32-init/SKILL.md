@@ -1,145 +1,85 @@
 ---
 name: esp32-init
 description: Use when starting a new ESP32 project from scratch before writing any application code. Do NOT use for adding features to an existing project.
+scripts:
+  connect: scripts/connect.sh
+  setup: scripts/setup.sh
 ---
 
 # ESP32 Project Initialization
 
-Use this skill when the user wants to start a new ESP-IDF project. Follow the ordered workflow below. Do not skip pre-work.
-
 ## Workflow
 
-### Phase 1: System Pre-work (one-time per IDF environment)
+### Phase 1: Pre-work
 
-1. Install `esp-bmgr-assist` in the IDF Python environment so `idf.py bmgr` is available as a CLI action:
-    ```bash
-    pip install esp-bmgr-assist
-    ```
-2. Ask the user for:
-    - Chip variant (e.g. esp32, esp32s3, esp32c6)
-    - Module type (WROOM / WROVER)
-    - Board model name (e.g. CYD / ESP32-2432S028R, ESP32-DevKitC, M5Stack Core2)
+1. Run `scripts/setup.sh <project_dir>` — installs `esp-bmgr-assist` in IDF venv, adds `espressif/esp_board_manager` dependency, sets up `uv` + `pytest-embedded[serial]` for host testing.
+2. Board connected? Run `scripts/connect.sh` — detects port, chip, revision, IDF version.
+3. Confirm detected chip + board model with user.
 
-### Phase 2: Hardware Verification
+### Phase 2: Create Project
 
-1. Ask the user to connect the board via USB and identify the serial port (`/dev/ttyUSB0`, `/dev/ttyACM0`, COM3, etc.)
-2. Run `idf.py -p <port> monitor` briefly to confirm the device responds (boot log visible, no error)
-3. Exit monitor (`Ctrl+]`)
-4. Only proceed if hardware connection is confirmed. If no device found, stop.
+1. `idf.py create-project --cpp <name>`
+2. `idf.py set-target <chip>`
 
-### Phase 3: Project Creation
+### Phase 3: Board Discovery
 
-1. `idf.py create-project --cpp <project_name>` — creates C++ project with `.cpp` entry point
-2. `idf.py set-target <chip>` — e.g. esp32, esp32s3, esp32c6
-3. Add BMGR dependency:
-    ```bash
-    idf.py add-dependency "espressif/esp_board_manager"
-    ```
-    This auto-pulls `espressif/esp_boards` (official Espressif board definitions).
-4. Set up Python virtual environment for test tooling (runs on host, not on device):
-    - `uv init --no-project` — creates `pyproject.toml` without a project type
-    - `uv add --dev pytest-embedded[serial]` — adds test framework as dev dependency
+1. `idf.py bmgr -l`
+2. If listed: `idf.py bmgr -b <name_or_index>`. BMGR generates init code under components/gen_bmgr_codes/.
+3. If not listed: add `espressif/esp_friends_boards: "*"` to `main/idf_component.yml`, re-scan.
+4. If still not found (custom board):
+   - Fetch pinout from vendor docs/manufacturer/community repo.
+   - Create components/<board_name>/ with:
+      - board_info.yaml — metadata (name, chip, version, manufacturer
+      - board_peripherals.yaml — bus/GPIO/peripheral pin assignments
+      - board_devices.yaml — functional devices with I2C addresses, SPI modes, init params
+   - For LCD displays: also create `setup_device.c` with `lcd_panel_factory_entry_t()` (weak symbol, see examples in `esp_boards/`).
+   - Validate: `idf.py bmgr -b <board_name>`
+   - Write `BOARD_NOTES.md` for unresolved peripherals.
+5. **STOP. Present pinout + known issues to user. Get explicit agreement.**
 
-### Phase 4: Board Discovery
+### Phase 4: Build
 
-1. Scan available boards:
-    ```bash
-    idf.py bmgr -l
-    ```
-2. **If the user's board is listed:** Select it:
-    ```bash
-    idf.py bmgr -b <board_name_or_index>
-    ```
-    BMGR generates init code under `components/gen_bmgr_codes/`. Proceed to Phase 5.
-3. **If the board is NOT listed:** Try adding community board definitions:
-    ```yaml
-    # main/idf_component.yml
-    dependencies:
-      espressif/esp_friends_boards: "*"
-    ```
-    Then re-scan (`idf.py bmgr -l`). If the board now appears, select it.
-4. **If still not found (custom/unknown board):**
-    - Fetch canonical pinout from a known source (vendor GitHub repo, Espressif docs, manufacturer schematic PDF)
-    - Manually populate the three BMGR YAML files under `components/<board_name>/`:
-        - `board_info.yaml` — metadata (board name, chip, version, manufacturer)
-        - `board_peripherals.yaml` — low-level bus/gpio/peripheral pin assignments
-        - `board_devices.yaml` — functional devices with I2C addresses, SPI modes, init params
-    - Board names must use only lowercase letters, digits, and underscores (hyphens are rejected by BMGR)
-    - Run BMGR to validate and generate:
-        ```bash
-        idf.py bmgr -b <board_name>
-        ```
-        BMGR automatically validates the YAMLs: SoC capabilities, hardware limits, I/O validity, I/O conflicts, name matching, and peripheral dependency resolution.
-    - Create `BOARD_NOTES.md` in the board directory documenting any peripherals or devices that could not be configured via BMGR (wrong chip, unsupported driver, known pin conflict, missing component, etc.). Use terse bullet points:
-        ```markdown
-        # Board: cyd_2432s028r — Known Issues
+1. `idf.py save-defconfig`
+2. Write `project.env`
+```
+ESP_PROJECT_NAME=<name>
+ESP_TARGET=<target>
+ESP_IDF_VERSION=<version>          # from connect.sh output
+ESP_BOARD=<board>
+ESP_PORT=<port>                    # from connect.sh output
+ESP_SCRIPTS=scripts/
+ESP_SDKCONFIG_DEFAULTS=sdkconfig.defaults
+ESP_MAIN_IDF_COMPONENT_YML=main/idf_component.yml
+ESP_BOARD_DIR=components/<board>/
+ESP_BOARD_NOTES=components/<board>/BOARD_NOTES.md
+```
+3. `idf.py build`
 
-        - **Touch (XPT2046)**: Not in BMGR device matrix. Init manually in app.
-        - **RGB LEDs (GPIO 4, 16, 17)**: Active-low, no BMGR device type. Init via `gpio_set_level` in app.
-        - **Light sensor (GPIO 34)**: Input-only pin, no BMGR device. Read via ADC in app.
-        ```
-5. **STOP. Present the pinout/board selection and known issues to the user. Get explicit agreement before proceeding.**
-
-### Phase 5: Configure and Build
-
-1. `idf.py menuconfig` — configure:
-    - Partition table (factory vs OTA)
-    - Flash size / mode
-    - WiFi / Bluetooth if needed
-    - Component-specific Kconfig options
-2. `idf.py save-defconfig` — creates `sdkconfig.defaults`
-3. Write `project.env` at project root — agent manifest referencing canonical files:
-    ```ini
-    ESP_PROJECT_NAME=<name>
-    ESP_TARGET=<target>                # also in sdkconfig.defaults: CONFIG_IDF_TARGET
-    ESP_IDF_VERSION=v6.1              # from `eim list`
-    ESP_BOARD=<board>
-    ESP_PORT=<port>                    # only place this is persisted
-    ESP_SDKCONFIG_DEFAULTS=sdkconfig.defaults
-    ESP_MAIN_IDF_COMPONENT_YML=main/idf_component.yml
-    ESP_BOARD_DIR=components/<board>/
-    ESP_BOARD_NOTES=components/<board>/BOARD_NOTES.md
-    ```
-    Keep it small (pointers, not data) — avoid polluting agent context.
-4. `idf.py build` — verify compilation succeeds
-
-### Phase 6: Flash and Verify
+### Phase 5: Flash & Verify
 
 1. `idf.py -p <port> flash`
-2. `idf.py -p <port> monitor` — confirm app runs on device
+2. `idf.py -p <port> monitor`
 
-## Generated Project Structure
+## Generated Structure
 
 ```
-<project_name>/
-├── CMakeLists.txt              # project-level build config
-├── main/
-│   ├── CMakeLists.txt          # main component registration
-│   └── <project_name>.cpp      # app_main() entry point
-├── components/
-│   ├── <board_name>/           # board definition (Phase 4 — only for custom boards)
-│   │   ├── board_info.yaml
-│   │   ├── board_peripherals.yaml
-│   │   ├── board_devices.yaml
-│   │   ├── BOARD_NOTES.md          # known issues, unresolved peripherals
-│   │   └── sdkconfig.defaults.board  (optional)
-│   └── gen_bmgr_codes/         # auto-generated by bmgr (do not edit)
-├── sdkconfig                   # generated by menuconfig (gitignore)
-├── sdkconfig.defaults          # project defaults (commit this)
-├── build/                      # compiled output (gitignore)
-├── pyproject.toml              # uv-managed Python tooling config
-├── .venv/                      # virtual env (gitignore)
-├── project.env                  # agent manifest (commit this)
-└── main/idf_component.yml      # component registry dependencies
+<name>/
+├── CMakeLists.txt
+├── main/{CMakeLists.txt,idf_component.yml,<name>.cpp}
+├── components/<board>/{board_*.yaml,setup_device.c,BOARD_NOTES.md}
+├── components/gen_bmgr_codes/
+├── scripts/{connect.sh,setup.sh}
+├── sdkconfig / sdkconfig.defaults / build/
+├── pyproject.toml / .venv/
+└── project.env
 ```
 
 ## Common Mistakes
-
-- **Skipping `pip install esp-bmgr-assist`**: Without this, `idf.py bmgr` action may not be available. Do this once per IDF env in Phase 1.
-- **Forgot `espressif/esp_board_manager` dependency**: `idf.py bmgr` silently fails. Add via `idf.py add-dependency "espressif/esp_board_manager"` before `idf.py bmgr -l`.
-- **Skipped `set-target` before `bmgr -b`**: BMGR may select wrong chip, or `board_manager.defaults` chip won't match `sdkconfig`. Always `set-target` first.
-- **`idf.py set-target` after `bmgr -b`**: This wipes `sdkconfig` and regenerates, requiring you to re-run `bmgr -b` afterward.
-- **Board name with hyphens**: BMGR rejects them. Use underscores only.
-- **Jumping straight to manual YAML**: Always run `idf.py bmgr -l` first — the board may already be defined in `esp_boards` or `esp_friends_boards`, saving you the work of writing YAMLs.
-- **Not using BMGR validation**: After writing custom YAMLs, `idf.py bmgr -b <board_name>` validates SoC capabilities, I/O conflicts, pin ranges, and peripheral deps. Run it even if you think the YAMLs are correct.
-- **Not documenting unresolved peripherals**: If a component can't be expressed in BMGR YAML (touch controller, ADC sensor, custom LED), note it in `BOARD_NOTES.md` so the next agent doesn't waste time trying to shove it into YAML.
+- **Manually editing sdkconfig**: it is autogenerated and regularly overwritten
+- **`set-target` after `bmgr -b`**: Wipes sdkconfig, need re-run.
+- **Board name with hyphens**: BMGR rejects. Use underscores.
+- **Missing `setup_device.c` for LCD**: Linker error `undefined reference to lcd_panel_factory_entry_t`.
+- **Kconfig leak (`espressif/button` → `ESP_BOARD_DEV_KNOB_SUPPORT`)**: Add symbol to `managed_components/espressif__esp_board_manager/gen_codes/Kconfig.in`.
+- **Jumping to manual YAML**: Run `bmgr -l` first — board may be in `esp_boards` or `esp_friends_boards`.
+- **Skip BMGR validation**: `idf.py bmgr -b <board>` catches pin conflicts and dep issues.
+- **Skip BOARD_NOTES.md**: Next agent will waste time trying to express unsupported peripherals in YAML.
