@@ -15,18 +15,17 @@ Run `scripts/connect.sh` — outputs `ESP_IDF_VERSION`, port, chip type/revision
 
 ### 2. Create project
 ```
-idfpy create-project --cpp <name>
-idfpy set-target <chip>
+eim run "idf.py create-project --cpp <name>"
+eim run "idf.py set-target <chip>"
 ```
-(`idfpy` is the `bash -c` pattern above, e.g. `bash -c '. activate >/dev/null 2>&1 && idf.py create-project --cpp foo'`)
 
 ### 3. Setup dependencies
 Run `scripts/setup.sh` from the project root. Installs esp-bmgr-assist in IDF venv, adds esp_board_manager, creates uv-managed env with pytest-embedded.
 
 ### 4: Board Discovery
 
-1. `idfpy bmgr -l`
-2. If listed: `idfpy bmgr -b <name_or_index>`. BMGR generates init code under components/gen_bmgr_codes/.
+1. `eim run "idf.py bmgr -l"`
+2. If listed: `eim run "idf.py bmgr -b <name_or_index>"`. BMGR generates init code under components/gen_bmgr_codes/.
 3. If not listed: add `espressif/esp_friends_boards: "*"` to `main/idf_component.yml`, re-scan.
 4. If still not found (custom board):
    - Fetch pinout from vendor docs/manufacturer/community repo.
@@ -35,13 +34,13 @@ Run `scripts/setup.sh` from the project root. Installs esp-bmgr-assist in IDF ve
       - board_peripherals.yaml — bus/GPIO/peripheral pin assignments
       - board_devices.yaml — functional devices with I2C addresses, SPI modes, init params
    - For LCD displays: also create `setup_device.c` with `lcd_panel_factory_entry_t()` (weak symbol, see examples in `esp_boards/`).
-   - Validate: `idfpy bmgr -b <board_name>`
+   - Validate: `eim run "idf.py bmgr -b <board_name>"`
    - Write `BOARD_NOTES.md` for unresolved peripherals.
 5. **STOP. Present pinout + known issues to user. Get explicit agreement.**
 
 ### 5: Build
 
-1. `idfpy save-defconfig`
+1. `eim run "idf.py save-defconfig"`
 2. Write `project.env`
 ```
 ESP_PROJECT_NAME=<name>
@@ -55,12 +54,12 @@ ESP_MAIN_IDF_COMPONENT_YML=main/idf_component.yml
 ESP_BOARD_DIR=components/<board>/
 ESP_BOARD_NOTES=components/<board>/BOARD_NOTES.md
 ```
-3. `idfpy build`
+3. `eim run "idf.py build"`
 
 ### 6: Flash & Verify
 
-1. `idfpy -p <port> flash`
-2. `idfpy -p <port> monitor`
+1. `eim run "idf.py -p <port> flash"`
+2. `eim run "idf.py -p <port> monitor"`
 
 ## Generated Structure
 
@@ -82,5 +81,5 @@ ESP_BOARD_NOTES=components/<board>/BOARD_NOTES.md
 - **Board name with hyphens**: BMGR rejects. Use underscores.
 - **Kconfig leak (`espressif/button` → `ESP_BOARD_DEV_KNOB_SUPPORT`)**: Add symbol to `managed_components/espressif__esp_board_manager/gen_codes/Kconfig.in`.
 - **Jumping to manual YAML**: Run `bmgr -l` first — board may be in `esp_boards` or `esp_friends_boards`.
-- **Skip BMGR validation**: `idfpy bmgr -b <board>` catches pin conflicts and dep issues.
+- **Skip BMGR validation**: `eim run "idf.py bmgr -b <board>"` catches pin conflicts and dep issues.
 - **Skip BOARD_NOTES.md**: Next agent will waste time trying to express unsupported peripherals in YAML.

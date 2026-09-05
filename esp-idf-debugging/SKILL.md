@@ -13,55 +13,31 @@ Systematic diagnostic ladder for ESP-IDF on embedded targets. Work from lowest-c
 
 Before the ladder, collect context. If `project.env` exists at project root (from `esp32-init`), read it — answers most questions below.
 
-### 1. Confirm this is an ESP-IDF project
 
-Check `project.env` exists (fastest signal). If absent, fall back to `CMakeLists.txt` containing `project()` and `sdkconfig` or `sdkconfig.defaults`.
+### Confirm device connection
 
-| When you see | Conclusion |
-|---|---|
-| `project.env` `ESP_TARGET=esp32s3` | Chip is ESP32-S3, port is in `ESP_PORT`, board is in `ESP_BOARD` |
-| No `project.env` but `CMakeLists.txt` + `sdkconfig.defaults` | Project exists, probe `CONFIG_IDF_TARGET` from sdkconfig |
-| Neither | Stop — not an ESP-IDF project |
+`./scripts/connect.sh`
 
-### 2. Activate the IDF environment
 
-```bash
-eim list                              # see installed versions
-eim select <major-version>            # e.g. v6.1 or v5.3
-source <path-to-esp-idf>/export.sh    # activates idf.py, gdb, openocd in PATH
-```
+### Confirm debug symbol availability
 
-If `eim` not found, try `source` directly on a known `export.sh` path or check `ESP_IDF_VERSION` from `project.env`.
-
-### 3. Confirm device connection
-
-Read `ESP_PORT` from `project.env`:
-
-```bash
-idf.py -p <ESP_PORT> monitor  # boot log appears → connected
-```
-
-If no boot log, try `ls /dev/tty*` (Linux) or `ls /dev/cu.*` (macOS) to find the port. If no port found at all, Rungs 3–4 are unreachable. Rungs 1–2 (log analysis, Kconfig recommendations) still work.
-
-### 4. Confirm debug symbol availability
-
-`build/<ESP_PROJECT_NAME>.elf` must exist and be newer than source. Without it, core dump decode and GDB fail.
+`build/<CMakeProfile>/<ESP_PROJECT_NAME>.elf` must exist and be newer than source. Without it, core dump decode and GDB fail.
 
 ```bash
 ls -l build/*.elf              # exists?
 stat -c %Y build/*.elf         # when was it built?
 ```
 
-If stale, `idf.py build` first.
+If stale, ```eim run "idf.py --preset <CMakePresetName> build"``` first.
 
-### 5. Determine toolchain prefix from target
+### Determine toolchain prefix from target
 
 | `ESP_TARGET` | GDB binary |
 |---|---|
 | esp32, esp32s2, esp32s3 | `xtensa-esp32-elf-gdb` |
 | esp32c3, esp32c6, esp32h2, esp32p4 | `riscv32-esp-elf-gdb` |
 
-Used in Rung 3 (GDB Stub) and Rung 4 (OpenOCD). If `project.env` is missing, read `CONFIG_IDF_TARGET` from `sdkconfig`. If neither exists, guess from `build/bootloader/` ELF names.
+Used in Rung 3 (GDB Stub) and Rung 4 (OpenOCD). If `project.env` is missing, read `CONFIG_IDF_TARGET` from `sdkconfig`. If neither exists, stop and exit.
 
 ## When to Use
 
